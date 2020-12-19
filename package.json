@@ -1,12 +1,13 @@
 {
-  "name": "pos-integrator-core",
-  "version": "0.1.0",
+  "name": "@orderingstack/pos-integrator-core",
+  "version": "0.1.2",
   "description": "Ordering Stack POS integrator core - library for easy developing POS integrations with Ordering Stack platform.",
   "scripts": {
     "test": "jest"
   },
   "author": "kolec1",
   "license": "MIT",
+  "main": "src/main.js",
   "dependencies": {
     "@stomp/stompjs": "6.0.0",
     "axios": "^0.19.2",
@@ -19,7 +20,7 @@
     "text-encoding": "^0.7.0"
   },
   "devDependencies": {
-    "jest": "^25.1.0",
+    "jest": "^26.6.3",
     "supertest": "^4.0.2"
   },
   "pkg": {
@@ -33,10 +34,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kolec1/pos-integrator-core.git"
+    "url": "git+https://github.com/orderingstack/pos-integrator-core.git"
   },
   "bugs": {
-    "url": "https://github.com/kolec1/pos-integrator-core/issues"
+    "url": "https://github.com/orderingstack/pos-integrator-core/issues"
   },
-  "homepage": "https://github.com/kolec1/pos-integrator-core#readme"
+  "homepage": "https://github.com/orderingstack/pos-integrator-core#readme"
 }
