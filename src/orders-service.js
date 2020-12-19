@@ -1,4 +1,3 @@
-const posIntegration = require('./pos-integrations/pos-example.js')
 const axios = require('axios');
 const orderDao = require('./db/orders-dao');
 const schedule = require('node-schedule'); 
@@ -52,7 +51,7 @@ async function pullOrders(venue, token) {
   }
 }
 
-function initOrderService() {
+function initOrderService(orderCallback) {
   orderDao.createDatabase();
 
   /* run every hour */
@@ -61,7 +60,7 @@ function initOrderService() {
   });
   /* run every 30 seconds */
   schedule.scheduleJob('*/30 * * * * *', function () {
-    processOrdersFromDB();
+    processOrdersFromDB(orderCallback);
   });
 }
 
@@ -69,11 +68,11 @@ function purgeOrderMapFromOldOrders() {
   orderDao.removeOlderThan(DB_ORDERS_RETENTION_DAYS);
 }
 
-function processOrdersFromDB() {
+function processOrdersFromDB(orderCallback) {
   const orders = orderDao.getNotProcessedOrders();
   for (const order of orders) {
     //do something with this order
-    posIntegration.insertNewOrderToPOS(order);
+    orderCallback(order);
     orderDao.setOrderAsProcessed(order.id);    
   };
 }
