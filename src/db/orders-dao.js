@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const fs = require('fs');
 
 const DB_FILENAME_DEFAULT = './data/orders.db';
-const DB_SCHEMA_FILENAME = './src/db/schema.sql';
+const DB_SCHEMA_FILENAME = require.resolve( './schema.sql');
 
 let db = null;
 
