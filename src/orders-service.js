@@ -1,6 +1,6 @@
 const axios = require('axios');
 const orderDao = require('./db/orders-dao');
-const schedule = require('node-schedule'); 
+const schedule = require('node-schedule');
 
 const DB_ORDERS_RETENTION_DAYS = 4;
 
@@ -73,14 +73,36 @@ function processOrdersFromDB(orderCallback) {
   for (const order of orders) {
     //do something with this order
     orderCallback(order);
-    orderDao.setOrderAsProcessed(order.id);    
+    orderDao.setOrderAsProcessed(order.id);
   };
+}
+
+async function markOrderAsProcessed(orderId, token) {
+  let result;
+  try {
+    result = await axios({
+      method: 'POST',
+      url: `${process.env.BASE_URL}/ordering-api/api/order/${orderId}/extra`,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      data: {
+        "store": { "x-pos-synced": true, "x-pos-synced-at": new Date() }
+      }
+    })
+    orderDao.markOrderAsProcessed(orderId);
+    return true;
+  } catch (err) {
+    console.log(err); 
+    return false;
+  }
 }
 
 
 
 module.exports = {
-  pullAndProcessOrders, processOrder, initOrderService
+  pullAndProcessOrders, processOrder, initOrderService, markOrderAsProcessed
 }
 
 //-------------------------

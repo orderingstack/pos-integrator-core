@@ -1,6 +1,6 @@
 {
   "name": "@orderingstack/pos-integrator-core",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Ordering Stack POS integrator core - library for easy developing POS integrations with Ordering Stack platform.",
   "scripts": {
     "test": "jest"
