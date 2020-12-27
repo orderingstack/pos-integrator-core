@@ -7,11 +7,11 @@ const sjsc = require('sockjs-client');
  * @param {*} tenant 
  * @param {*} venue 
  * @param {*} accessTokenProviderCallbackAsync function called before connecting to STOMP server. Should return access token.
- * @param {*} _onConnectAsync async function (accessToken) {....}
- * @param {*} _onDisconnectAsync 
- * @param {*} _onMessageAsync async function (message, accessToken) {....}
+ * @param {*} onConnectedAsync async function (accessToken) {....}
+ * @param {*} onDisconnectAsync 
+ * @param {*} onMessageAsync async function (message, accessToken) {....}
  */
-async function connectWebSockets(tenant, venue, accessTokenProviderCallbackAsync, _onConnectAsync, _onDisconnectAsync, _onMessageAsync) {
+async function connectWebSockets({tenant, venue, accessTokenProviderCallbackAsync, onConnectedAsync, onDisconnectAsync, onMessageAsync}) {
     const stompConfig = {
         brokerURL:  `${process.env.BASE_URL}/ws`, 
         connectHeaders: {
@@ -36,16 +36,16 @@ async function connectWebSockets(tenant, venue, accessTokenProviderCallbackAsync
 
         onConnect: async function () {
             const accessToken = stompConfig.connectHeaders.login;
-            await _onConnectAsync(accessToken);
+            await onConnectedAsync(accessToken);
             console.log('Websocket connected.');
             var subscription = client.subscribe(`/kds/${tenant}/${venue}`, async function (data) {
                 var message = JSON.parse(data.body);
-                await _onMessageAsync(message, accessToken);
+                await onMessageAsync(message, accessToken);
             });
         },
 
         onDisconnect: async function () {
-            await _onDisconnectAsync();
+            await onDisconnectAsync();
             console.log('Websocket disconnected.');
         },
 

@@ -1,25 +1,4 @@
 const axios = require('axios');
-const orderDao = require('./db/orders-dao');
-const schedule = require('node-schedule');
-
-const DB_ORDERS_RETENTION_DAYS = 4;
-
-async function pullAndProcessOrders(venue, token) {
-  const orders = await pullOrders(venue, token);
-  for (const order of orders) {
-    orderDao.upsertOrder(order);
-  };
-}
-
-async function processOrder(message) {
-  const order = message;
-  try {
-    orderDao.upsertOrder(order);
-  } catch (ex) {
-    console.error(ex);
-  }
-}
-
 
 /**
 Pulls open orders for venue. Uses provided access token to authenticate to rest api.   
@@ -51,33 +30,7 @@ async function pullOrders(venue, token) {
   }
 }
 
-function initOrderService(orderCallback) {
-  orderDao.createDatabase();
-
-  /* run every hour */
-  schedule.scheduleJob('0 * * * *', function () {
-    purgeOrderMapFromOldOrders();
-  });
-  /* run every 30 seconds */
-  schedule.scheduleJob('*/30 * * * * *', function () {
-    processOrdersFromDB(orderCallback);
-  });
-}
-
-function purgeOrderMapFromOldOrders() {
-  orderDao.removeOlderThan(DB_ORDERS_RETENTION_DAYS);
-}
-
-function processOrdersFromDB(orderCallback) {
-  const orders = orderDao.getNotProcessedOrders();
-  for (const order of orders) {
-    //do something with this order
-    orderCallback(order);
-    orderDao.setOrderAsProcessed(order.id);
-  };
-}
-
-async function markOrderAsProcessed(orderId, token) {
+async function updateCentrallyOrderExtraAttr(token, orderId, store) {
   let result;
   try {
     result = await axios({
@@ -88,10 +41,9 @@ async function markOrderAsProcessed(orderId, token) {
         'Content-Type': 'application/json'
       },
       data: {
-        "store": { "x-pos-synced": true, "x-pos-synced-at": new Date() }
+        store
       }
     })
-    orderDao.markOrderAsProcessed(orderId);
     return true;
   } catch (err) {
     console.log(err); 
@@ -99,10 +51,9 @@ async function markOrderAsProcessed(orderId, token) {
   }
 }
 
-
-
 module.exports = {
-  pullAndProcessOrders, processOrder, initOrderService, markOrderAsProcessed
+  pullOrders, 
+  updateCentrallyOrderExtraAttr
 }
 
 //-------------------------
