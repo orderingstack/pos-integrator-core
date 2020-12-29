@@ -40,7 +40,7 @@ async function connectWebSockets({tenant, venue, accessTokenProviderCallbackAsyn
             console.log('Websocket connected.');
             var subscription = client.subscribe(`/kds/${tenant}/${venue}`, async function (data) {
                 var message = JSON.parse(data.body);
-                await onMessageAsync(message, accessToken);
+                await onMessageAsync(message);
             });
         },
 

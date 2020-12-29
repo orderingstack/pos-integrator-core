@@ -13,8 +13,7 @@ test('upsert order and check is it is added', ()=>{
 
 test('retrieve order from db', ()=>{
     const order = orderDao.getOrder(db, order1.id);
-    const orderFull = JSON.parse(order.orderbody);
-    expect(order1.total).toBe(orderFull.total);
+    expect(order1.orderbody).toBe(order.orderbody);
 });
 
 test('remove orders older than x days', ()=>{
@@ -51,7 +50,10 @@ test('upsert order with additional columns', ()=>{
     const orderA = {
         id: 'f53d99fc-63e0-4a51-a9cd-0d3706d18900',
         created: '2020-12-12',
-        total: 1.34,
+        orderbody: JSON.stringify({
+            id: 'f53d99fc-63e0-4a51-a9cd-0d3706d18900',
+            total: 1.34,
+        }),
         isCreatedCentrally: 1,
         processedLocally: 1,
     }
@@ -64,7 +66,10 @@ test('is created centrally field', ()=>{
     const orderL = {
         id: 'f53d99fc-63e0-4a51-a9cd-0d3706d18901',
         created: '2020-12-13',
-        total: 4.56,
+        orderbody: JSON.stringify({
+            id: 'f53d99fc-63e0-4a51-a9cd-0d3706d18901',
+            total: 4.56,
+        }),
         isCreatedCentrally: 0,
         processedLocally: 1,
     }        
@@ -76,7 +81,10 @@ test('is created centrally field', ()=>{
 const order1 = {
     id: 'a296192d-1850-4c2f-8aea-76f859fd682e',
     created: '2020-12-07',
-    total: 123.12,
+    orderbody: JSON.stringify({
+        id: 'a296192d-1850-4c2f-8aea-76f859fd682e',
+        total: 123.12,
+    }),
     isCreatedCentrally: 1,
 }
 
@@ -85,7 +93,10 @@ oldDate.setDate(oldDate.getDate()-5);
 const order2 = {
     id: 'f53d99fc-63e0-4a51-a9cd-0d3706d189dc',
     created: oldDate.toISOString(),
-    total: 99.99,
+    orderbody: JSON.stringify({
+        id: 'f53d99fc-63e0-4a51-a9cd-0d3706d189dc',
+        total: 99.99,
+    }),
     isCreatedCentrally: 1,
 }
 

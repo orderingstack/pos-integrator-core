@@ -9,27 +9,19 @@ let jobPurgeOldOrders = null;
 let jobProcessOrderLocallyCallback = null;
 let jobProcessOrderCentrallyCallback = null;
 
-async function addOrderToProcessingQueue(orderData, { processedLocally = null, processedCentrally = null, isCreatedCentrally = null }) {
+async function addOrderToProcessingQueue(orderData, { processedLocally = 0, processedCentrally = null, isCreatedCentrally = 1 }={}) {
     const orderRec = {
         id: orderData.id,
         created: orderData.created,
-        orderbody: orderData
+        orderbody: JSON.stringify(orderData)
     }
     if (orderDao.isOrderInDb(db, orderRec.id)) {
         //TODO: update order in db, make sure that processLocally/globally is not changes
         return;
     }
-    if (processedLocally != null) {
-        orderRec.processedLocally = processedLocally;
-    } else {
-        orderRec.processedLocally = 0;
-    }
-    if (processedCentrally != null) {
-        orderRec.processedCentrally = processedCentrally;
-    } 
-    if (!isCreatedCentrally != null) {
-        orderRec.isCreatedCentrally = isCreatedCentrally;
-    }
+    orderRec.processedLocally = processedLocally;
+    orderRec.processedCentrally = processedCentrally;
+    orderRec.isCreatedCentrally = isCreatedCentrally;
     try {
         orderDao.upsertOrder(db, orderRec);
     } catch (ex) {

@@ -22,7 +22,7 @@ function upsertOrder(db, order) {
     const addColumnNames = ['processedLocally', 'processedCentrally'];
     let additionalColumns = '';
     let additionalParams = '';
-    let vals = [order.id, order.isCreatedCentrally, order.created, JSON.stringify(order)];
+    let vals = [order.id, order.isCreatedCentrally, order.created, order.orderbody];
     for (const col of addColumnNames) {
         if (order.hasOwnProperty(col)) {
             additionalColumns += `, ${col}`;
@@ -31,7 +31,7 @@ function upsertOrder(db, order) {
         }
     }
     const sql = `REPLACE INTO OSL_ORDER (id, isCreatedCentrally, created, orderbody ${additionalColumns}) VALUES (?, ?, ?, ? ${additionalParams})`;
-    //console.log(`${sql}  - VALS: ${vals}`);
+    console.log(`${sql}  - VALS: ${vals}`);
     const stmt = db.prepare(sql);
     stmt.run(vals);
 }
