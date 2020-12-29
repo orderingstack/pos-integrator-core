@@ -1,7 +1,6 @@
 CREATE TABLE IF NOT EXISTS OSL_ORDER (
     id VARCHAR(34) PRIMARY KEY,
-    source VARCHAR(32),
-    additionalData TEXT,
+    isCreatedCentrally BOOLEAN DEFAULT 1,    
     created DATE,
     processedLocally BOOLEAN DEFAULT null,
     processedLocallyAt DATE,

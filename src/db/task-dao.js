@@ -1,8 +1,9 @@
 const Database = require('better-sqlite3');
 const fs = require('fs');
+const path = require('path');
 
 const DB_FILENAME_DEFAULT = './data/task.db';
-const DB_SCHEMA_FILENAME = require.resolve( './task.sql');
+const DB_SCHEMA_FILENAME = path.join(__dirname, './task.sql'); //require.resolve( './task.sql');
 
 function createDatabase(dbFileName = DB_FILENAME_DEFAULT) {
     const db = new Database(dbFileName); //, { verbose: console.log });

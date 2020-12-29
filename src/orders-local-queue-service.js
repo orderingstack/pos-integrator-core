@@ -5,14 +5,33 @@ const schedule = require('node-schedule');
 const DB_ORDERS_RETENTION_DAYS = 4;
 let db = null;
 
-async function addOrderToProcessingQueue(message) {
-    const order = message;
-    if (orderDao.isOrderInDb(db, order.id)) {
+let jobPurgeOldOrders = null;
+let jobProcessOrderLocallyCallback = null;
+let jobProcessOrderCentrallyCallback = null;
+
+async function addOrderToProcessingQueue(orderData, { processedLocally = null, processedCentrally = null, isCreatedCentrally = null }) {
+    const orderRec = {
+        id: orderData.id,
+        created: orderData.created,
+        orderbody: orderData
+    }
+    if (orderDao.isOrderInDb(db, orderRec.id)) {
+        //TODO: update order in db, make sure that processLocally/globally is not changes
         return;
     }
-    order.processedLocally = 0;
+    if (processedLocally != null) {
+        orderRec.processedLocally = processedLocally;
+    } else {
+        orderRec.processedLocally = 0;
+    }
+    if (processedCentrally != null) {
+        orderRec.processedCentrally = processedCentrally;
+    } 
+    if (!isCreatedCentrally != null) {
+        orderRec.isCreatedCentrally = isCreatedCentrally;
+    }
     try {
-        orderDao.upsertOrder(db, order);
+        orderDao.upsertOrder(db, orderRec);
     } catch (ex) {
         console.error(ex);
     }
@@ -25,21 +44,28 @@ async function pullOrdersAndAddToProcessingQueue(venue, token) {
     };
 }
 
-function initOrdersQueue({ processOrderLocallyCallback, processOrderCentrallyCallback }) {
-    db = orderDao.createDatabase();
-
+function initOrdersQueue({ processOrderLocallyCallback, processOrderCentrallyCallback, processLocallyInterval = 15, processCentrallyInterval = 30 }) {
     /* run every hour */
-    schedule.scheduleJob('0 * * * *', function () {
+    jobPurgeOldOrders = schedule.scheduleJob('0 * * * *', function () {
         purgeOldOrders();
     });
-    /* run every 15 seconds */
-    schedule.scheduleJob('*/15 * * * * *', function () {
-        locallyProcessOrdersFromDB(processOrderLocallyCallback);
-    });
-    /* run every 30 seconds */
-    schedule.scheduleJob('*/30 * * * * *', function () {
-        centrallyProcessOrdersFromDB(processOrderCentrallyCallback);
-    });
+    if (processOrderLocallyCallback) {
+        jobProcessOrderLocallyCallback = schedule.scheduleJob(`*/${processLocallyInterval} * * * * *`, function () {
+            locallyProcessOrdersFromDB(processOrderLocallyCallback);
+        });
+    }
+    if (processOrderCentrallyCallback) {
+        jobProcessOrderCentrallyCallback = schedule.scheduleJob(`*/${processCentrallyInterval} * * * * *`, function () {
+            centrallyProcessOrdersFromDB(processOrderCentrallyCallback);
+        });
+    }
+}
+
+function stopOrdersQueue() {
+    const r1 = schedule.cancelJob(jobPurgeOldOrders);
+    const r2 = schedule.cancelJob(jobProcessOrderLocallyCallback);
+    const r3 = schedule.cancelJob(jobProcessOrderCentrallyCallback);
+    //console.log(`Canceling Orders queue jobs: ${r1} ${r2} ${r3}`);
 }
 
 function purgeOldOrders() {
@@ -69,12 +95,20 @@ function setOrderProcessedCentrally(orderId, processed) {
     orderDao.setOrderProcessedCentrally(db, orderId, processed);
 }
 
-module.exports = {
-    initOrdersQueue,
-    addOrderToProcessingQueue,
-    pullOrdersAndAddToProcessingQueue,
-    setOrderProcessedLocally,
-    setOrderProcessedCentrally,
+module.exports = function (dbFileName) {
+    if (dbFileName) {
+        db = orderDao.createDatabase(dbFileName);
+    } else {
+        db = orderDao.createDatabase();
+    }
+    const module = {
+        initOrdersQueue,
+        stopOrdersQueue,
+        addOrderToProcessingQueue,
+        pullOrdersAndAddToProcessingQueue,
+        setOrderProcessedLocally,
+        setOrderProcessedCentrally,
+    }
+    return module;
 }
 
-//-------------------------

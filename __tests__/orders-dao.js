@@ -52,7 +52,7 @@ test('upsert order with additional columns', ()=>{
         id: 'f53d99fc-63e0-4a51-a9cd-0d3706d18900',
         created: '2020-12-12',
         total: 1.34,
-        source: 'CENTRAL',
+        isCreatedCentrally: 1,
         processedLocally: 1,
     }
         
@@ -60,12 +60,24 @@ test('upsert order with additional columns', ()=>{
     expect(orderDao.getOrder(db, orderA.id).processedLocally).toBe(1);
 });
 
+test('is created centrally field', ()=>{
+    const orderL = {
+        id: 'f53d99fc-63e0-4a51-a9cd-0d3706d18901',
+        created: '2020-12-13',
+        total: 4.56,
+        isCreatedCentrally: 0,
+        processedLocally: 1,
+    }        
+    orderDao.upsertOrder(db, orderL);
+    expect(orderDao.getOrder(db, orderL.id).isCreatedCentrally).toBe(0);
+});
+
 
 const order1 = {
     id: 'a296192d-1850-4c2f-8aea-76f859fd682e',
     created: '2020-12-07',
     total: 123.12,
-    source: 'CENTRAL'
+    isCreatedCentrally: 1,
 }
 
 var oldDate = new Date();
@@ -74,6 +86,6 @@ const order2 = {
     id: 'f53d99fc-63e0-4a51-a9cd-0d3706d189dc',
     created: oldDate.toISOString(),
     total: 99.99,
-    source: 'CENTRAL'
+    isCreatedCentrally: 1,
 }
 

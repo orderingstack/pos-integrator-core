@@ -51,9 +51,27 @@ async function updateCentrallyOrderExtraAttr(token, orderId, store) {
   }
 }
 
+
+async function postNewOrder(token, order) {
+  const response = await axios(
+      {
+          method: 'post',
+          url: `${config.baseURL}/ordering-api/api/order/new`,
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+          },
+          data: order
+      }
+  );
+  return response.data;
+}
+
+
 module.exports = {
   pullOrders, 
-  updateCentrallyOrderExtraAttr
+  updateCentrallyOrderExtraAttr,
+  postNewOrder
 }
 
 //-------------------------

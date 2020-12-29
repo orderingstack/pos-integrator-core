@@ -1,8 +1,9 @@
 const Database = require('better-sqlite3');
 const fs = require('fs');
+const path = require('path');
 
 const DB_FILENAME_DEFAULT = './data/orders.db';
-const DB_SCHEMA_FILENAME = require.resolve('./schema.sql');
+const DB_SCHEMA_FILENAME = path.join(__dirname, './schema.sql'); //require.resolve('./schema.sql');
 
 function createDatabase(dbFileName = DB_FILENAME_DEFAULT) {
     //console.log(`Working with db file: ${dbFileName}`);
@@ -18,10 +19,10 @@ function isOrderInDb(db, orderId) {
 }
 
 function upsertOrder(db, order) {
-    const addColumnNames = ['processedLocally', 'processedCentrally, task'];
+    const addColumnNames = ['processedLocally', 'processedCentrally'];
     let additionalColumns = '';
     let additionalParams = '';
-    let vals = [order.id, order.source, order.created, JSON.stringify(order)];
+    let vals = [order.id, order.isCreatedCentrally, order.created, JSON.stringify(order)];
     for (const col of addColumnNames) {
         if (order.hasOwnProperty(col)) {
             additionalColumns += `, ${col}`;
@@ -29,7 +30,8 @@ function upsertOrder(db, order) {
             vals.push(order[col]);
         }
     }
-    const sql = `REPLACE INTO OSL_ORDER (id, source, created, orderbody ${additionalColumns}) VALUES (?, ?, ?, ? ${additionalParams})`;
+    const sql = `REPLACE INTO OSL_ORDER (id, isCreatedCentrally, created, orderbody ${additionalColumns}) VALUES (?, ?, ?, ? ${additionalParams})`;
+    //console.log(`${sql}  - VALS: ${vals}`);
     const stmt = db.prepare(sql);
     stmt.run(vals);
 }
