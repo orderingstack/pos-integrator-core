@@ -11,13 +11,14 @@ const sjsc = require('sockjs-client');
  * @param {*} onDisconnectAsync 
  * @param {*} onMessageAsync async function (message, accessToken) {....}
  */
-async function connectWebSockets({tenant, venue, accessTokenProviderCallbackAsync, onConnectedAsync, onDisconnectAsync, onMessageAsync}) {
+async function connectWebSockets({ tenant, venue, authDataProviderCallbackAsync, onConnectedAsync, onDisconnectAsync, onMessageAsync, onOrdersUpdateAsync, onNotificationAsync }) {
     const stompConfig = {
-        brokerURL:  `${process.env.BASE_URL}/ws`, 
+        brokerURL: `${process.env.BASE_URL}/ws`,        
         connectHeaders: {
-            login: null, 
+            login: null,
             passcode: null
         },
+        userUUID: null,
         debug: function (a) {
             //console.log(a);
         },
@@ -26,12 +27,13 @@ async function connectWebSockets({tenant, venue, accessTokenProviderCallbackAsyn
         heartbeatOutgoing: 4000,
 
         beforeConnect: async function () {
-            const accessToken = await accessTokenProviderCallbackAsync();
+            const {access_token, UUID} = await authDataProviderCallbackAsync();            
             // if (!accessToken) {
             //     //console.error('Access token provider error - deactivating socket')
             //     //client.deactivate();                
             // }
-            stompConfig.connectHeaders.login = accessToken;
+            stompConfig.connectHeaders.login = access_token;
+            stompConfig.userUUID = UUID;
         },
 
         onConnect: async function () {
@@ -42,6 +44,18 @@ async function connectWebSockets({tenant, venue, accessTokenProviderCallbackAsyn
                 var message = JSON.parse(data.body);
                 await onMessageAsync(message);
             });
+            if (onOrdersUpdateAsync) {
+                var subscriptionForOrdersUpdate = client.subscribe(`/order-changes/${tenant}/${stompConfig.userUUID}`, async function (data) {
+                    var message = JSON.parse(data.body);
+                    await onOrdersUpdateAsync(message);
+                });
+            }
+            if (onNotificationAsync) {
+                var subscriptionForNotifications = client.subscribe(`/notifications/${tenant}/${stompConfig.userUUID}`, async function (data) {
+                    var message = JSON.parse(data.body);
+                    await onNotificationAsync(message);
+                });
+            }
         },
 
         onDisconnect: async function () {
@@ -57,27 +71,27 @@ async function connectWebSockets({tenant, venue, accessTokenProviderCallbackAsyn
             console.error('Broker reported error: ' + frame.headers['message']);
             console.error('Additional details: ' + frame.body);
         },
-        onWebSocketClose: function(e) {
+        onWebSocketClose: function (e) {
             console.log('Websocket closed.');
             //console.log(e);
         },
-        onWebSocketError: function (e){
+        onWebSocketError: function (e) {
             console.log('Websocket error.');
             //console.log(e);
         },
-        onUnhandledMessage: function(m) {
+        onUnhandledMessage: function (m) {
             //console.log(m);
         },
-        logRawCommunication:true,
+        logRawCommunication: true,
         discardWebsocketOnCommFailure: true,
     };
 
-    const client = new StompJs.Client(stompConfig);    
+    const client = new StompJs.Client(stompConfig);
     if (typeof WebSocket !== 'function') { // Fallback code
         client.webSocketFactory = () => {
             const ws = sjsc(`${process.env.BASE_URL}/ws`);
             return ws;
-        };    
+        };
     }
     client.activate();
 }

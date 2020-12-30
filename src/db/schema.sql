@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS OSL_ORDER (
     processedCentrally BOOLEAN DEFAULT null,
     processedCentrallyAt DATE,
     processCentrallyNumOfFails NUMBER DEFAULT 0,
-    orderbody TEXT
+    orderbody TEXT,
+    extraData TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_order_date_desc ON OSL_ORDER (created DESC);
 CREATE INDEX IF NOT EXISTS idx_order_processedlocally_created_desc ON OSL_ORDER (processedLocally, created DESC);

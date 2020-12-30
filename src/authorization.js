@@ -40,12 +40,12 @@ async function getPassword(user) {
     return password;
 }
 
-async function checkAndOptionallyAskForCredentials(userName, _accessTokenProviderCallbackAsync) {
+async function checkAndOptionallyAskForCredentials(userName, _authDataProviderCallbackAsync) {
     let token = null;
     do {
         console.log(`Authorization with user: ${userName}...`);
-        const accessToken = await _accessTokenProviderCallbackAsync();
-        if (!accessToken) {
+        const {access_token} = await _authDataProviderCallbackAsync();
+        if (!access_token) {
             console.log('Authorization failed.');
             const r = await inquirer.prompt([
                 {
@@ -56,7 +56,7 @@ async function checkAndOptionallyAskForCredentials(userName, _accessTokenProvide
             ]);
             savePasswordForUser(userName, r.secret);
         } else {
-            token = accessToken;
+            token = access_token;
             console.log('Auth OK');            
         }
     } while (!token);

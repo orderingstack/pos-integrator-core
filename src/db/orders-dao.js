@@ -19,7 +19,7 @@ function isOrderInDb(db, orderId) {
 }
 
 function upsertOrder(db, order) {
-    const addColumnNames = ['processedLocally', 'processedCentrally'];
+    const addColumnNames = ['processedLocally', 'processedCentrally', 'extraData'];
     let additionalColumns = '';
     let additionalParams = '';
     let vals = [order.id, order.isCreatedCentrally, order.created, order.orderbody];
@@ -31,9 +31,15 @@ function upsertOrder(db, order) {
         }
     }
     const sql = `REPLACE INTO OSL_ORDER (id, isCreatedCentrally, created, orderbody ${additionalColumns}) VALUES (?, ?, ?, ? ${additionalParams})`;
-    console.log(`${sql}  - VALS: ${vals}`);
+    //console.log(`${sql}  - VALS: ${vals}`);
     const stmt = db.prepare(sql);
     stmt.run(vals);
+}
+
+function updateOrderBody(db, order) {
+    const sql = `UPDATE OSL_ORDER SET orderbody=? WHERE id=?`;
+    const stmt = db.prepare(sql);
+    stmt.run([order.orderbody, order.id]);
 }
 
 function getOrder(db, orderId) {
@@ -117,6 +123,7 @@ module.exports = {
     createDatabase,
     isOrderInDb,
     upsertOrder,
+    updateOrderBody,
     getOrder,
     removeOlderThan,
     getOrdersNotYetLocallyProcessed,

@@ -16,7 +16,7 @@ async function addOrderToProcessingQueue(orderData, { processedLocally = 0, proc
         orderbody: JSON.stringify(orderData)
     }
     if (orderDao.isOrderInDb(db, orderRec.id)) {
-        //TODO: update order in db, make sure that processLocally/globally is not changes
+        orderDao.updateOrderBody(db, orderRec);
         return;
     }
     orderRec.processedLocally = processedLocally;
@@ -87,6 +87,14 @@ function setOrderProcessedCentrally(orderId, processed) {
     orderDao.setOrderProcessedCentrally(db, orderId, processed);
 }
 
+function updateOrderBody(orderRec) {
+    orderDao.updateOrderBody(db, orderRec);
+}
+
+function getOrder(orderId) {
+    return orderDao.getOrder(db, orderId);
+}
+
 module.exports = function (dbFileName) {
     if (dbFileName) {
         db = orderDao.createDatabase(dbFileName);
@@ -100,6 +108,8 @@ module.exports = function (dbFileName) {
         pullOrdersAndAddToProcessingQueue,
         setOrderProcessedLocally,
         setOrderProcessedCentrally,
+        updateOrderBody,
+        getOrder
     }
     return module;
 }
