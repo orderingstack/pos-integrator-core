@@ -6,7 +6,9 @@ const DB_FILENAME_DEFAULT = './data/orders.db';
 const DB_SCHEMA_FILENAME = path.join(__dirname, './schema.sql'); //require.resolve('./schema.sql');
 
 function createDatabase(dbFileName = DB_FILENAME_DEFAULT) {
-    //console.log(`Working with db file: ${dbFileName}`);
+    //console.log(`Working with db file: ${dbFileName}`);  
+    //TODO: for file db we shoud ensure that dir exists (good example with fs-extra): 
+    //TODO: const fs = require('fs-extra'); const dir = '/tmp/this/path/does/not/exist'; fs.ensureDirSync(dir);
     db = new Database(dbFileName); //, { verbose: console.log });
     const migration = fs.readFileSync(DB_SCHEMA_FILENAME, 'utf8');
     db.exec(migration);
@@ -68,7 +70,6 @@ function setOrderProcessedLocally(db, orderId, processed) {
     }
 }
 
-
 function setOrderProcessedCentrally(db, orderId, processed) {
     if (processed) {
         const stmt = db.prepare("UPDATE OSL_ORDER SET processedCentrally=true, processedCentrallyAt=DateTime('now') WHERE id=?");
@@ -78,7 +79,6 @@ function setOrderProcessedCentrally(db, orderId, processed) {
         stmt.run([orderId]);
     }
 }
-
 
 // TODO: do not removew if order is not processed and closed - attrs: closed, completed, status, processed
 function removeOlderThan(db, days) {
@@ -119,6 +119,21 @@ function getOrdersNotYetProcessed(db, { locally, centrally }) {
     return orders;
 }
 
+function getStats(db) {
+    const stmt = db.prepare("SELECT count(1) as cnt from OSL_ORDER");
+    const r1 = stmt.get([]);
+    const stmt2 = db.prepare("SELECT count(1) as cnt from OSL_ORDER WHERE processedLocally=1 AND processedCentrally=1");
+    const r2 = stmt2.get([]);
+    const stmt3 = db.prepare("SELECT max(created) as maxCreated from OSL_ORDER");
+    const r3 = stmt3.get([]);
+
+    return {
+        totalOrders: r1.cnt,
+        processedOrders: r2.cnt,
+        oldestOrderCreatedAt: r3.maxCreated,
+    };
+}
+
 module.exports = {
     createDatabase,
     isOrderInDb,
@@ -132,6 +147,6 @@ module.exports = {
     setOrderAsProcessedLocally,
     setOrderAsProcessedCentrally,
     setOrderProcessedLocally,
-    setOrderProcessedCentrally
+    setOrderProcessedCentrally,
+    getStats,
 }
-

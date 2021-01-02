@@ -11,6 +11,12 @@ test('upsert order and check is it is added', () => {
     expect(orderDao.isOrderInDb(db, order2.id)).toBe(true);
 });
 
+test('check stats', () => {
+    const stats = orderDao.getStats(db);
+    expect(stats.totalOrders).toBe(2);
+});
+
+
 test('retrieve order from db', () => {
     const order = orderDao.getOrder(db, order1.id);
     expect(order1.orderbody).toBe(order.orderbody);
@@ -81,7 +87,7 @@ test('update order body', () => {
     const ob = JSON.parse(order1.orderbody);
     order1.orderbody = JSON.stringify({
         ...ob,
-        newField:'123'
+        newField: '123'
     });
     orderDao.updateOrderBody(db, order1);
     const retrievedOrder = orderDao.getOrder(db, order1.id);

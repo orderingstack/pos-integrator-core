@@ -8,6 +8,7 @@ let db = null;
 let jobPurgeOldOrders = null;
 let jobProcessOrderLocallyCallback = null;
 let jobProcessOrderCentrallyCallback = null;
+let jobStatsCallback = null;
 
 async function addOrderToProcessingQueue(orderData, { processedLocally = 0, processedCentrally = null, isCreatedCentrally = 1 }={}) {
     const orderRec = {
@@ -36,7 +37,14 @@ async function pullOrdersAndAddToProcessingQueue(venue, token) {
     };
 }
 
-function initOrdersQueue({ processOrderLocallyCallback, processOrderCentrallyCallback, processLocallyInterval = 15, processCentrallyInterval = 30 }) {
+function initOrdersQueue({ 
+    processOrderLocallyCallback, 
+    processLocallyInterval = 15, 
+    processOrderCentrallyCallback,
+    processCentrallyInterval = 30,
+    statsCallback = null,
+    statsInterval = 60*60,
+ }) {
     /* run every hour */
     jobPurgeOldOrders = schedule.scheduleJob('0 * * * *', function () {
         purgeOldOrders();
@@ -51,13 +59,18 @@ function initOrdersQueue({ processOrderLocallyCallback, processOrderCentrallyCal
             centrallyProcessOrdersFromDB(processOrderCentrallyCallback);
         });
     }
+    if (statsCallback) {
+        jobStatsCallback = schedule.scheduleJob(`*/${statsInterval} * * * * *`, function () {
+            generateStatsFromDB(statsCallback);
+        });
+    }
 }
 
 function stopOrdersQueue() {
-    const r1 = schedule.cancelJob(jobPurgeOldOrders);
-    const r2 = schedule.cancelJob(jobProcessOrderLocallyCallback);
-    const r3 = schedule.cancelJob(jobProcessOrderCentrallyCallback);
-    //console.log(`Canceling Orders queue jobs: ${r1} ${r2} ${r3}`);
+    if (jobPurgeOldOrders) schedule.cancelJob(jobPurgeOldOrders);
+    if (jobProcessOrderLocallyCallback) schedule.cancelJob(jobProcessOrderLocallyCallback);
+    if (jobProcessOrderCentrallyCallback) schedule.cancelJob(jobProcessOrderCentrallyCallback);
+    if (jobStatsCallback) schedule.cancelJob(jobStatsCallback);
 }
 
 function purgeOldOrders() {
@@ -77,6 +90,11 @@ function centrallyProcessOrdersFromDB(processOrderCallback) {
         //do something with this order
         processOrderCallback(order);
     };
+}
+
+function generateStatsFromDB(statsCallback) {    
+    const stats = orderDao.getStats(db);
+    statsCallback(stats);
 }
 
 function setOrderProcessedLocally(orderId, processed) {

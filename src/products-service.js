@@ -11,15 +11,30 @@ productsToImport: [
 async function importProductsToOrderingStack (productsToImport, token, alterProductBeforeImportCallback) {
   const importedIds = [];
   const errors = [];
-  for (const prod of productsToImport) {
+  /*
+  //one by one approach 
+  for (const prod of productsToImport) {  
     const result = await importSingleProduct(prod, token, alterProductBeforeImportCallback);
     if (result.ok) {
       importedIds.push(prod.id);
     } else {
       errors.push({ id: prod.id, err: result.err });
     }
+  }*/
+  let result = [];
+  //parallel approach
+  const promises = productsToImport.map(prod=>importSingleProduct(prod, token, alterProductBeforeImportCallback));
+  while (promises.length) {
+    // 20 at at time
+    const batchResult = await Promise.all( promises.splice(0, 20) );
+    result = result.concat(batchResult);
   }
-  return { imported: importedIds, errors };
+  const output = {
+    imported: 0,      
+    errors: []
+  }
+  result.map(e=>{if (e.ok) output.imported++; else output.errors.push(e.err)});
+  return output;
 }
 
 
