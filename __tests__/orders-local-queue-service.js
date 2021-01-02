@@ -71,7 +71,18 @@ test('add order to queue (no params->processed locally=0)', async () => {
     ordersService.stopOrdersQueue();
     expect(order.processedLocally).toBe(0);
     expect(order.isCreatedCentrally).toBe(1);
-    const orderBody = JSON.parse(order.orderbody);
+    const orderBody = JSON.parse(order.orderbody)
     expect(orderBody.id).toBe(order3.id);
     ordersService.setOrderProcessedLocally(order.id, true);
+});
+
+test('set processedCentrally to true', ()=>{
+    const order4 = {
+        id: 'dbf0cc35-16cc-422b-9d14-d979d7e7da44',
+        created: '2020-12-30',
+    }
+    ordersService.addOrderToProcessingQueue(order4, { processedLocally: 1, processedCentrally: 0, isCreatedCentrally: 0 });
+    ordersService.setOrderProcessedCentrally(order4.id, true);
+    const order = ordersService.getOrder(order4.id);
+    expect(order.processedCentrally).toBe(1);
 });

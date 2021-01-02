@@ -90,7 +90,7 @@ function removeOlderThan(db, days) {
 }
 
 function getOrdersNotYetLocallyProcessed(db) {
-    const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE processedLocally = false ORDER BY created DESC");
+    const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE processedLocally = 0 ORDER BY created DESC");
     const orders = [];
     const cursor = stmt.iterate();
     for (const row of cursor) {
@@ -100,7 +100,7 @@ function getOrdersNotYetLocallyProcessed(db) {
 }
 
 function getOrdersNotYetCentrallyProcessed(db) {
-    const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE processedLocally=true AND processedCentrally = false ORDER BY created DESC");
+    const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE processedLocally=1 AND processedCentrally = 0 ORDER BY created DESC");
     const orders = [];
     const cursor = stmt.iterate();
     for (const row of cursor) {
@@ -110,7 +110,7 @@ function getOrdersNotYetCentrallyProcessed(db) {
 }
 
 function getOrdersNotYetProcessed(db, { locally, centrally }) {
-    const stmt = db.prepare(`SELECT * FROM OSL_ORDER WHERE processedLocally=${locally ? true : false} AND processedCentrally = ${centrally ? true : false} ORDER BY created DESC`);
+    const stmt = db.prepare(`SELECT * FROM OSL_ORDER WHERE processedLocally=${locally ? 1 : 0} AND processedCentrally = ${centrally ? 1: 0} ORDER BY created DESC`);
     const orders = [];
     const cursor = stmt.iterate();
     for (const row of cursor) {
