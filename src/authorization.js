@@ -44,7 +44,8 @@ async function checkAndOptionallyAskForCredentials(userName, _authDataProviderCa
     let token = null;
     do {
         console.log(`Authorization with user: ${userName}...`);
-        const {access_token} = await _authDataProviderCallbackAsync();
+        const authResult = await _authDataProviderCallbackAsync();
+        const access_token = (authResult)?authResult.access_token:null;
         if (!access_token) {
             console.log('Authorization failed.');
             const r = await inquirer.prompt([
