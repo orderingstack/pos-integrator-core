@@ -55,7 +55,9 @@ async function checkAndOptionallyAskForCredentials(userName, _authDataProviderCa
                     message: `Enter password for [${userName}]:`,
                 },
             ]);
-            savePasswordForUser(userName, r.secret);
+            if (r.secret) {
+                savePasswordForUser(userName, r.secret);
+            }
         } else {
             token = access_token;
             console.log('Auth OK');            
