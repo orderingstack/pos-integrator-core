@@ -6,29 +6,26 @@ productsToImport: [
 { name, description, price, name-en, description-en, name-jp, description-jp, imageUrl,  category, ordincat, subcategory, ordinsubcat, reportCategory },
 ...
 ]
-
 */
-async function importProductsToOrderingStack (productsToImport, token, alterProductBeforeImportCallback) {
-  const importedIds = [];
-  const errors = [];
-  /*
+async function importProductsToOrderingStack (productsToImport, authDataProviderCallbackAsync, alterProductBeforeImportCallback, concurrencyLevel=10) {
   //one by one approach 
+  const result = [];
   for (const prod of productsToImport) {  
-    const result = await importSingleProduct(prod, token, alterProductBeforeImportCallback);
-    if (result.ok) {
-      importedIds.push(prod.id);
-    } else {
-      errors.push({ id: prod.id, err: result.err });
-    }
-  }*/
-  let result = [];
+    const {access_token} = await authDataProviderCallbackAsync(); 
+    const res = await importSingleProduct(prod, access_token, alterProductBeforeImportCallback);
+    result.push(res);
+  }
+/*
   //parallel approach
+  let result = [];
   const promises = productsToImport.map(prod=>importSingleProduct(prod, token, alterProductBeforeImportCallback));
   while (promises.length) {
-    // 20 at at time
-    const batchResult = await Promise.all( promises.splice(0, 20) );
+    // concurrencyLevel at at time
+    const batchResult = await Promise.all( promises.splice(0, concurrencyLevel) );
+    await new Promise(resolve => setTimeout(resolve, 500));
     result = result.concat(batchResult);
   }
+  */
   const output = {
     imported: 0,      
     errors: []
@@ -58,7 +55,7 @@ async function importSingleProduct(productToImport, token, alterProductBeforeImp
 }
 
 async function fetchCurrentProduct(id, token) {
-  console.log(`fetching product ${id}`);
+  //console.log(`fetching product ${id}`);
   let burl = `${process.env.BASE_URL}`;
   burl += burl.endsWith("/") ? "" : "/"
   const url = `${burl}menu-api/api/items/${id}`;
@@ -96,7 +93,7 @@ function initialProductRecordSettings(prod, prodToImport) {
 }
 
 async function saveChangedProduct(prod, token) {
-  console.log(`saving product ${prod.id}`);
+  //console.log(`saving product ${prod.id}`);
   let newProduct = false;
   if (prod.__new) {
     newProduct = true;
