@@ -27,7 +27,7 @@ test('add order to queue', async () => {
                 resolve(order);
             },
             processOrderCentrallyCallback: null,
-            processLocallyInterval: 1
+            processLocallyCronPattern: `*/1 * * * * *`
         });
     });    
     ordersService.stopOrdersQueue();
@@ -46,7 +46,7 @@ test('add order to queue 2(processedLocally=1, centrally=1)', async () => {
             processOrderCentrallyCallback: (order) => {
                 resolve(order);
             },            
-            processCentrallyInterval: 1
+            processCentrallyCronPattern: `*/1 * * * * *`
         });
     });    
     ordersService.stopOrdersQueue();
@@ -65,7 +65,7 @@ test('add order to queue (no params->processed locally=0)', async () => {
                 resolve(order);
             },
             processOrderCentrallyCallback: null,
-            processLocallyInterval: 1
+            processLocallyCronPattern: `*/1 * * * * *`
         });
     });    
     ordersService.stopOrdersQueue();

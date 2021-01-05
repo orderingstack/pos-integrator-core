@@ -39,28 +39,28 @@ async function pullOrdersAndAddToProcessingQueue(venue, token) {
 
 function initOrdersQueue({ 
     processOrderLocallyCallback, 
-    processLocallyInterval = 15, 
+    processLocallyCronPattern = '*/2 * * * * *', 
     processOrderCentrallyCallback,
-    processCentrallyInterval = 30,
+    processCentrallyCronPattern = '*/3 * * * * *',
     statsCallback = null,
-    statsInterval = 60*60,
+    statsCronPattern = '15 * * * * *',
  }) {
     /* run every hour */
     jobPurgeOldOrders = schedule.scheduleJob('0 * * * *', function () {
         purgeOldOrders();
     });
     if (processOrderLocallyCallback) {
-        jobProcessOrderLocallyCallback = schedule.scheduleJob(`*/${processLocallyInterval} * * * * *`, function () {
+        jobProcessOrderLocallyCallback = schedule.scheduleJob(`${processLocallyCronPattern}`, function () {
             locallyProcessOrdersFromDB(processOrderLocallyCallback);
         });
     }
     if (processOrderCentrallyCallback) {
-        jobProcessOrderCentrallyCallback = schedule.scheduleJob(`*/${processCentrallyInterval} * * * * *`, function () {
+        jobProcessOrderCentrallyCallback = schedule.scheduleJob(`${processCentrallyCronPattern}`, function () {
             centrallyProcessOrdersFromDB(processOrderCentrallyCallback);
         });
     }
     if (statsCallback) {
-        jobStatsCallback = schedule.scheduleJob(`*/${statsInterval} * * * * *`, function () {
+        jobStatsCallback = schedule.scheduleJob(`${statsCronPattern}`, function () {
             generateStatsFromDB(statsCallback);
         });
     }
