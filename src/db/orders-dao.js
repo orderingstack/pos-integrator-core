@@ -82,7 +82,7 @@ function setOrderProcessedCentrally(db, orderId, processed) {
 
 // TODO: do not removew if order is not processed and closed - attrs: closed, completed, status, processed
 function removeOlderThan(db, days) {
-    const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE created < date('now','-'||?||' days')"); //date('now','-4 days')"); 
+    const stmt = db.prepare("DELETE FROM OSL_ORDER WHERE created < date('now','-'||?||' days')"); //date('now','-4 days')"); 
     const cursor = stmt.iterate([days]);
     for (const row of cursor) {
         //console.log(row);
@@ -124,13 +124,13 @@ function getStats(db) {
     const r1 = stmt.get([]);
     const stmt2 = db.prepare("SELECT count(1) as cnt from OSL_ORDER WHERE processedLocally=1 AND processedCentrally=1");
     const r2 = stmt2.get([]);
-    const stmt3 = db.prepare("SELECT max(created) as maxCreated from OSL_ORDER");
+    const stmt3 = db.prepare("SELECT min(created) as minCreated from OSL_ORDER");
     const r3 = stmt3.get([]);
 
     return {
         totalOrders: r1.cnt,
         processedOrders: r2.cnt,
-        oldestOrderCreatedAt: r3.maxCreated,
+        oldestOrderCreatedAt: r3.minCreated,
     };
 }
 

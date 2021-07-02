@@ -2,7 +2,7 @@ const orderDao = require('./db/orders-dao');
 const ordersService = require('./orders-service');
 const schedule = require('node-schedule');
 
-const DB_ORDERS_RETENTION_DAYS = 4;
+const DB_ORDERS_RETENTION_DAYS = 30;
 let db = null;
 
 let jobPurgeOldOrders = null;
