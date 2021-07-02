@@ -83,10 +83,10 @@ function setOrderProcessedCentrally(db, orderId, processed) {
 // TODO: do not removew if order is not processed and closed - attrs: closed, completed, status, processed
 function removeOlderThan(db, days) {
     const stmt = db.prepare("DELETE FROM OSL_ORDER WHERE created < date('now','-'||?||' days')"); //date('now','-4 days')"); 
-    const cursor = stmt.iterate([days]);
-    for (const row of cursor) {
-        //console.log(row);
-    }
+    // const cursor = stmt.iterate([days]);
+    // for (const row of cursor) {
+    //     //console.log(row);
+    // }
 }
 
 function getOrdersNotYetLocallyProcessed(db) {
