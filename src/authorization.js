@@ -31,7 +31,7 @@ const authorize = async (baseUrl, tenant, basicAuthPass, username) => {
     }
 }
 
-const _internalCredentials = { user: null, password: null};
+let _internalCredentials = { user: null, password: null};
 function setInternalCredentials(user, password) {
     _internalCredentials = {
         user, 
