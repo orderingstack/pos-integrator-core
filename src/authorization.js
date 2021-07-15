@@ -32,7 +32,7 @@ const authorize = async (baseUrl, tenant, basicAuthPass, username) => {
 }
 
 const _internalCredentials = { user: null, password: null};
-export function setInternalCredentials(user, password) {
+function setInternalCredentials(user, password) {
     _internalCredentials = {
         user, 
         password
