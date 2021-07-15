@@ -31,11 +31,22 @@ const authorize = async (baseUrl, tenant, basicAuthPass, username) => {
     }
 }
 
+const _internalCredentials = { user: null, password: null};
+export function setInternalCredentials(user, password) {
+    _internalCredentials = {
+        user, 
+        password
+    };
+}
+
 async function savePasswordForUser(user, password) {
     await keytar.setPassword('OrderingStack', user, password);
 }
 
 async function getPassword(user) {
+    if (_internalCredentials.user === user) {
+        return _internalCredentials.password;
+    }
     const password = await keytar.getPassword('OrderingStack', user);
     return password;
 }
@@ -68,5 +79,5 @@ async function checkAndOptionallyAskForCredentials(userName, _authDataProviderCa
 
 
 module.exports = {
-    authorize, savePasswordForUser, checkAndOptionallyAskForCredentials
+    authorize, savePasswordForUser, checkAndOptionallyAskForCredentials, setInternalCredentials
 }
