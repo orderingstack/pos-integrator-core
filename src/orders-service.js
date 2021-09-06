@@ -1,4 +1,4 @@
-const axios = require('axios');
+const axios = require("axios");
 
 /**
 Pulls open orders for venue. Uses provided access token to authenticate to rest api.   
@@ -6,15 +6,15 @@ Pulls open orders for venue. Uses provided access token to authenticate to rest 
 * @param {*} token - access token   
  */
 async function pullOrders(venue, token) {
-  console.log('Pulling orders...');
+  console.log("Pulling orders...");
   let response = null;
   try {
     response = await axios({
-      method: 'get',
+      method: "get",
       url: `${process.env.BASE_URL}/ordering-api/api/orders/venue/${venue}`,
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
     });
     const orders = [];
@@ -34,44 +34,49 @@ async function updateCentrallyOrderExtraAttr(token, orderId, store) {
   let result;
   try {
     result = await axios({
-      method: 'POST',
+      method: "POST",
       url: `${process.env.BASE_URL}/ordering-api/api/order/${orderId}/extra`,
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
       data: {
-        store
-      }
-    })
+        store,
+      },
+    });
     return true;
   } catch (err) {
-    console.log(err); 
+    console.log(err);
     return false;
   }
 }
 
-
 async function postNewOrder(token, order) {
-  const response = await axios(
-      {
-          method: 'post',
-          url: `${config.baseURL}/ordering-api/api/order/new`,
-          headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-          },
-          data: order
-      }
-  );
+  const response = await axios({
+    method: "post",
+    url: `${process.env.BASE_URL}/ordering-api/api/order/new`,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    data: order,
+  });
   return response.data;
 }
 
-
-module.exports = {
-  pullOrders, 
-  updateCentrallyOrderExtraAttr,
-  postNewOrder
+async function setOrderLinesProcessed(token, orderId, orderLines) {
+  const response = await axios({
+    method: "post",
+    url: `${process.env.BASE_URL}/ordering-api/api/order/${orderId}/lines/processed`,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    data: [...orderLines],
+  });
+  return response.data;
 }
 
-//-------------------------
+module.exports = {
+  pullOrders, updateCentrallyOrderExtraAttr, postNewOrder, setOrderLinesProcessed
+}
