@@ -77,6 +77,32 @@ async function setOrderLinesProcessed(token, orderId, orderLines) {
   return response.data;
 }
 
+async function postOrderQueueNumber(token, order, queueNumber) {
+  const uid = order.id;
+  const data = {
+    venue: order.buckets[0].venue,
+    queuePos: queueNumber,
+  };
+  console.log('---- post order queue set: >' + queueNumber + '<');
+  try {
+    const response = await axios({
+      method: 'post',
+      url: `${process.env.BASE_URL}/ordering-api/api/order/${uid}/queuePos`,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      data,
+    });
+    console.log('--- post order queue set result :' + response.status);
+    return response;
+  } catch (ex) {
+    console.log(ex);
+    return { status: ex.response.status, data: ex.response.data };
+  }
+}
+
+
 module.exports = {
-  pullOrders, updateCentrallyOrderExtraAttr, postNewOrder, setOrderLinesProcessed
+  pullOrders, updateCentrallyOrderExtraAttr, postNewOrder, setOrderLinesProcessed, postOrderQueueNumber
 }
