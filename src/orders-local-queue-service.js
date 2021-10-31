@@ -14,6 +14,7 @@ async function addOrderToProcessingQueue(orderData, { processedLocally = 0, proc
     const orderRec = {
         id: orderData.id,
         created: orderData.created,
+        orderStatus: orderData.status,
         orderbody: JSON.stringify(orderData)
     }
     if (orderDao.isOrderInDb(db, orderRec.id)) {
@@ -75,6 +76,7 @@ function stopOrdersQueue() {
 
 function purgeOldOrders() {
     orderDao.removeOlderThan(db, DB_ORDERS_RETENTION_DAYS);
+    orderDao.removeClosedOrdersOrAbandoned(db);
 }
 
 function locallyProcessOrdersFromDB(processOrderCallback) {

@@ -12,3 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.54] - 2021-07-15
 
 - allow to set user pass from env variable by setInternalCredentials function
+
+## [0.3.0] - 2021-11-01
+
+- fix: removing old records from local db
+- new feature: new column orderStatus for storing order status
+- removing CLOSED and ABANDONED orders in regular job

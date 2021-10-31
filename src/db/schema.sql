@@ -9,8 +9,10 @@ CREATE TABLE IF NOT EXISTS OSL_ORDER (
     processedCentrallyAt DATE,
     processCentrallyNumOfFails NUMBER DEFAULT 0,
     orderbody TEXT,
-    extraData TEXT
+    extraData TEXT,
+    orderStatus VARCHAR(32)
 );
 CREATE INDEX IF NOT EXISTS idx_order_date_desc ON OSL_ORDER (created DESC);
 CREATE INDEX IF NOT EXISTS idx_order_processedlocally_created_desc ON OSL_ORDER (processedLocally, created DESC);
 CREATE INDEX IF NOT EXISTS idx_order_processedcentrally_created_desc ON OSL_ORDER (processedCentrally, created DESC);
+CREATE INDEX IF NOT EXISTS idx_order_status_desc ON OSL_ORDER (orderStatus DESC);

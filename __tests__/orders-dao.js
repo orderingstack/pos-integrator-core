@@ -22,9 +22,9 @@ test('retrieve order from db', () => {
     expect(order1.orderbody).toBe(order.orderbody);
 });
 
-test('remove orders older than x days', () => {
-    orderDao.removeOlderThan(db, 2);
-});
+// test('remove orders older than x days', () => {
+//     orderDao.removeOlderThan(db, 2);
+// });
 
 test('getOrdersNotYetLocallyProcessed, check order and condition', () => {
     const orders = orderDao.getOrdersNotYetLocallyProcessed(db);
@@ -56,6 +56,7 @@ test('upsert order with additional columns', () => {
     const orderA = {
         id: 'f53d99fc-63e0-4a51-a9cd-0d3706d18900',
         created: '2020-12-12',
+        orderStatus: 'NEW',
         orderbody: JSON.stringify({
             id: 'f53d99fc-63e0-4a51-a9cd-0d3706d18900',
             total: 1.34,
@@ -72,6 +73,7 @@ test('is created centrally field', () => {
     const orderL = {
         id: 'f53d99fc-63e0-4a51-a9cd-0d3706d18901',
         created: '2020-12-13',
+        orderStatus: 'NEW',
         orderbody: JSON.stringify({
             id: 'f53d99fc-63e0-4a51-a9cd-0d3706d18901',
             total: 4.56,
@@ -94,9 +96,30 @@ test('update order body', () => {
     expect(retrievedOrder.orderbody).toBe(order1.orderbody);
 });
 
+test('remove closed orders', () => {
+    const initialTotalOrders = orderDao.getStats(db).totalOrders;
+    const orderA = {
+        id: 'bfe47a95-95fd-419b-994d-4e61ca42c356',
+        created: '2020-12-12',
+        orderbody: JSON.stringify({
+            id: 'bfe47a95-95fd-419b-994d-4e61ca42c356',
+            total: 1.34,
+        }),
+        orderStatus: 'CLOSED',
+        isCreatedCentrally: 1,
+        processedLocally: 1,
+    }
+
+    orderDao.upsertOrder(db, orderA);
+    expect(orderDao.getStats(db).totalOrders).toBe(initialTotalOrders+1);
+    orderDao.removeClosedOrdersOrAbandoned(db);
+    expect(orderDao.getStats(db).totalOrders).toBe(initialTotalOrders);
+});
+
 const order1 = {
     id: 'a296192d-1850-4c2f-8aea-76f859fd682e',
     created: '2020-12-07',
+    orderStatus: 'NEW',
     orderbody: JSON.stringify({
         id: 'a296192d-1850-4c2f-8aea-76f859fd682e',
         total: 123.12,
@@ -109,6 +132,7 @@ oldDate.setDate(oldDate.getDate() - 5);
 const order2 = {
     id: 'f53d99fc-63e0-4a51-a9cd-0d3706d189dc',
     created: oldDate.toISOString(),
+    orderStatus: 'NEW',
     orderbody: JSON.stringify({
         id: 'f53d99fc-63e0-4a51-a9cd-0d3706d189dc',
         total: 99.99,

@@ -21,7 +21,7 @@ function isOrderInDb(db, orderId) {
 }
 
 function upsertOrder(db, order) {
-    const addColumnNames = ['processedLocally', 'processedCentrally', 'extraData'];
+    const addColumnNames = ['processedLocally', 'processedCentrally', 'extraData', 'orderStatus'];
     let additionalColumns = '';
     let additionalParams = '';
     let vals = [order.id, order.isCreatedCentrally, order.created, order.orderbody];
@@ -39,9 +39,9 @@ function upsertOrder(db, order) {
 }
 
 function updateOrderBody(db, order) {
-    const sql = `UPDATE OSL_ORDER SET orderbody=? WHERE id=?`;
+    const sql = `UPDATE OSL_ORDER SET orderbody=?, orderStatus=? WHERE id=?`;
     const stmt = db.prepare(sql);
-    stmt.run([order.orderbody, order.id]);
+    stmt.run([order.orderbody, order.orderStatus, order.id]);    
 }
 
 function getOrder(db, orderId) {
@@ -83,12 +83,15 @@ function setOrderProcessedCentrally(db, orderId, processed) {
 // TODO: do not removew if order is not processed and closed - attrs: closed, completed, status, processed
 function removeOlderThan(db, days) {
     const stmt = db.prepare("DELETE FROM OSL_ORDER WHERE created < date('now','-'||?||' days')"); //date('now','-4 days')"); 
-    // const cursor = stmt.iterate([days]);
-    // for (const row of cursor) {
-    //     //console.log(row);
-    // }
+    stmt.run([days]);
 }
 
+function removeClosedOrdersOrAbandoned(db) {
+    const stmt = db.prepare("DELETE FROM OSL_ORDER WHERE orderStatus='CLOSED' OR orderStatus='ABANDONED'"); 
+    stmt.run();
+}
+
+//TODO: AND NOT orderStatus in ('CLOSED', 'ABANDONED')
 function getOrdersNotYetLocallyProcessed(db) {
     const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE processedLocally = 0 ORDER BY created DESC");
     const orders = [];
@@ -99,6 +102,7 @@ function getOrdersNotYetLocallyProcessed(db) {
     return orders;
 }
 
+//TODO: AND NOT orderStatus in ('CLOSED', 'ABANDONED')
 function getOrdersNotYetCentrallyProcessed(db) {
     const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE processedLocally=1 AND processedCentrally = 0 ORDER BY created DESC");
     const orders = [];
@@ -109,6 +113,7 @@ function getOrdersNotYetCentrallyProcessed(db) {
     return orders;
 }
 
+//TODO: AND NOT orderStatus in ('CLOSED', 'ABANDONED')
 function getOrdersNotYetProcessed(db, { locally, centrally }) {
     const stmt = db.prepare(`SELECT * FROM OSL_ORDER WHERE processedLocally=${locally ? 1 : 0} AND processedCentrally = ${centrally ? 1: 0} ORDER BY created DESC`);
     const orders = [];
@@ -141,6 +146,7 @@ module.exports = {
     updateOrderBody,
     getOrder,
     removeOlderThan,
+    removeClosedOrdersOrAbandoned,
     getOrdersNotYetLocallyProcessed,
     getOrdersNotYetCentrallyProcessed,
     getOrdersNotYetProcessed,
