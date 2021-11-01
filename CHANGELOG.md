@@ -18,3 +18,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix: removing old records from local db
 - new feature: new column orderStatus for storing order status
 - removing CLOSED and ABANDONED orders in regular job
+- not taking closed or abandoned order for local or central processing

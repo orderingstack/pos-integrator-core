@@ -14,7 +14,7 @@ async function addOrderToProcessingQueue(orderData, { processedLocally = 0, proc
     const orderRec = {
         id: orderData.id,
         created: orderData.created,
-        orderStatus: orderData.status,
+        orderStatus: orderData.status || 'NEW',
         orderbody: JSON.stringify(orderData)
     }
     if (orderDao.isOrderInDb(db, orderRec.id)) {
