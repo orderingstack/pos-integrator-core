@@ -11,7 +11,7 @@ const sjsc = require('sockjs-client');
  * @param {*} onDisconnectAsync 
  * @param {*} onMessageAsync async function (message, accessToken) {....}
  */
-async function connectWebSockets({ tenant, venue, authDataProviderCallbackAsync, onConnectedAsync, onDisconnectAsync, onMessageAsync, onOrdersUpdateAsync, onNotificationAsync }) {
+async function connectWebSockets({ tenant, venue, authDataProviderCallbackAsync, onConnectedAsync, onDisconnectAsync, onMessageAsync, onOrdersUpdateAsync, onNotificationAsync, onSteeringCommandAsync }) {
     const stompConfig = {
         brokerURL: `${process.env.BASE_URL}/ws`,        
         connectHeaders: {
@@ -54,6 +54,12 @@ async function connectWebSockets({ tenant, venue, authDataProviderCallbackAsync,
                 var subscriptionForNotifications = client.subscribe(`/notifications/${tenant}/${stompConfig.userUUID}`, async function (data) {
                     var message = JSON.parse(data.body);
                     await onNotificationAsync(message);
+                });
+            }
+            if (onSteeringCommandAsync) {
+                const subscriptionForSteeringCmds = client.subscribe(`/steering/${tenant}/${venue}`, async function (data) {
+                    var message = JSON.parse(data.body);
+                    await onSteeringCommandAsync(message);
                 });
             }
         },
