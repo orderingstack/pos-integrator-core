@@ -64,6 +64,35 @@ async function postNewOrder(token, order) {
   return response.data;
 }
 
+async function postOrderPayment(token, order, paymentType) {
+  if (parseFloat(order.editTotal) === 0) {
+    //console.log(' <<<<<<<<   TOTAL:  ZERO     <<<<<<');
+    return { status: 500, data: { error: "total === 0" } };
+  }
+  const data = {
+    orderId: order.id,
+    paymentType: paymentType,
+    amount: order.editTotal,
+    returnUrl: "",
+    returnErrorUrl: "",
+    TENANT: order.tenant,
+  };
+  try {
+    const response = await axios({
+      method: "post",
+      url: `${process.env.BASE_URL}/payment-api/create`,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      data,
+    });
+    return response;
+  } catch (ex) {
+    return { status: ex.response.status, data: ex.response.data };
+  }
+}
+
 async function setOrderLinesProcessed(token, orderId, orderLines) {
   const response = await axios({
     method: "post",
@@ -83,18 +112,18 @@ async function postOrderQueueNumber(token, order, queueNumber) {
     venue: order.buckets[0].venue,
     queuePos: queueNumber,
   };
-  console.log('---- post order queue set: >' + queueNumber + '<');
+  console.log("---- post order queue set: >" + queueNumber + "<");
   try {
     const response = await axios({
-      method: 'post',
+      method: "post",
       url: `${process.env.BASE_URL}/ordering-api/api/order/${uid}/queuePos`,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       data,
     });
-    console.log('--- post order queue set result :' + response.status);
+    console.log("--- post order queue set result :" + response.status);
     return response;
   } catch (ex) {
     console.log(ex);
@@ -102,7 +131,11 @@ async function postOrderQueueNumber(token, order, queueNumber) {
   }
 }
 
-
 module.exports = {
-  pullOrders, updateCentrallyOrderExtraAttr, postNewOrder, setOrderLinesProcessed, postOrderQueueNumber
-}
+  pullOrders,
+  updateCentrallyOrderExtraAttr,
+  postNewOrder,
+  setOrderLinesProcessed,
+  postOrderQueueNumber,
+  postOrderPayment,
+};
