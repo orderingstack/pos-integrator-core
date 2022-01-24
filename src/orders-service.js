@@ -131,6 +131,20 @@ async function postOrderQueueNumber(token, order, queueNumber) {
   }
 }
 
+
+async function cancelOrder(token, orderId) {
+  const response = await axios({
+    method: "post",
+    url: `${process.env.BASE_URL}/ordering-api/api/order/${orderId}/cancel`,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+}
+
+
 module.exports = {
   pullOrders,
   updateCentrallyOrderExtraAttr,
@@ -138,4 +152,5 @@ module.exports = {
   setOrderLinesProcessed,
   postOrderQueueNumber,
   postOrderPayment,
+  cancelOrder
 };
