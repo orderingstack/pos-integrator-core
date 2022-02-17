@@ -6,11 +6,10 @@ const DB_ORDERS_RETENTION_DAYS = 30;
 let db = null;
 
 let jobPurgeOldOrders = null;
-let jobProcessOrderLocallyCallback = null;
-let jobProcessOrderCentrallyCallback = null;
-let jobStatsCallback = null;
+let jobProcessOrders = null;
+let jobStats = null;
 
-async function addOrderToProcessingQueue(orderData, { processedLocally = 0, processedCentrally = null, isCreatedCentrally = 1 }={}) {
+async function addOrderToProcessingQueue(orderData, { stage = 'NEW' , isCreatedCentrally = 1 }={}) {
     const orderRec = {
         id: orderData.id,
         created: orderData.created,
@@ -21,8 +20,7 @@ async function addOrderToProcessingQueue(orderData, { processedLocally = 0, proc
         orderDao.updateOrderBody(db, orderRec);
         return;
     }
-    orderRec.processedLocally = processedLocally;
-    orderRec.processedCentrally = processedCentrally;
+    orderRec.stage = stage;
     orderRec.isCreatedCentrally = isCreatedCentrally;
     try {
         orderDao.upsertOrder(db, orderRec);
@@ -39,10 +37,8 @@ async function pullOrdersAndAddToProcessingQueue(venue, token) {
 }
 
 function initOrdersQueue({ 
-    processOrderLocallyCallback, 
-    processLocallyCronPattern = '*/2 * * * * *', 
-    processOrderCentrallyCallback,
-    processCentrallyCronPattern = '*/3 * * * * *',
+    processOrderCallback, 
+    processOrderCronPattern = '*/2 * * * * *', 
     statsCallback = null,
     statsCronPattern = '15 * * * * *',
  }) {
@@ -50,18 +46,13 @@ function initOrdersQueue({
     jobPurgeOldOrders = schedule.scheduleJob('0 * * * *', function () {
         purgeOldOrders();
     });
-    if (processOrderLocallyCallback) {
-        jobProcessOrderLocallyCallback = schedule.scheduleJob(`${processLocallyCronPattern}`, function () {
-            locallyProcessOrdersFromDB(processOrderLocallyCallback);
-        });
-    }
-    if (processOrderCentrallyCallback) {
-        jobProcessOrderCentrallyCallback = schedule.scheduleJob(`${processCentrallyCronPattern}`, function () {
-            centrallyProcessOrdersFromDB(processOrderCentrallyCallback);
+    if (processOrderCallback) {
+        jobProcessOrders = schedule.scheduleJob(`${processOrderCronPattern}`, function () {
+            processOrdersFromDB(processOrderCallback);
         });
     }
     if (statsCallback) {
-        jobStatsCallback = schedule.scheduleJob(`${statsCronPattern}`, function () {
+        jobStats = schedule.scheduleJob(`${statsCronPattern}`, function () {
             generateStatsFromDB(statsCallback);
         });
     }
@@ -69,9 +60,8 @@ function initOrdersQueue({
 
 function stopOrdersQueue() {
     if (jobPurgeOldOrders) schedule.cancelJob(jobPurgeOldOrders);
-    if (jobProcessOrderLocallyCallback) schedule.cancelJob(jobProcessOrderLocallyCallback);
-    if (jobProcessOrderCentrallyCallback) schedule.cancelJob(jobProcessOrderCentrallyCallback);
-    if (jobStatsCallback) schedule.cancelJob(jobStatsCallback);
+    if (jobProcessOrders) schedule.cancelJob(jobProcessOrders);
+    if (jobStats) schedule.cancelJob(jobStats);
 }
 
 function purgeOldOrders() {
@@ -79,17 +69,9 @@ function purgeOldOrders() {
     orderDao.removeClosedOrdersOrAbandoned(db);
 }
 
-function locallyProcessOrdersFromDB(processOrderCallback) {
-    const orders = orderDao.getOrdersNotYetLocallyProcessed(db);
+function processOrdersFromDB(processOrderCallback) {
+    const orders = orderDao.getOrdersNotDone(db);
     for (const order of orders) {
-        processOrderCallback(order);
-    };
-}
-
-function centrallyProcessOrdersFromDB(processOrderCallback) {
-    const orders = orderDao.getOrdersNotYetCentrallyProcessed(db);
-    for (const order of orders) {
-        //do something with this order
         processOrderCallback(order);
     };
 }
@@ -99,12 +81,8 @@ function generateStatsFromDB(statsCallback) {
     statsCallback(stats);
 }
 
-function setOrderProcessedLocally(orderId, processed) {
-    orderDao.setOrderProcessedLocally(db, orderId, processed);
-}
-
-function setOrderProcessedCentrally(orderId, processed) {
-    orderDao.setOrderProcessedCentrally(db, orderId, processed);
+function setOrderStage(orderId, stage) {
+    orderDao.setOrderStage(db, orderId, stage);
 }
 
 function updateOrderBody(orderRec) {
@@ -126,8 +104,7 @@ module.exports = function (dbFileName) {
         stopOrdersQueue,
         addOrderToProcessingQueue,
         pullOrdersAndAddToProcessingQueue,
-        setOrderProcessedLocally,
-        setOrderProcessedCentrally,
+        setOrderStage,
         updateOrderBody,
         getOrder
     }

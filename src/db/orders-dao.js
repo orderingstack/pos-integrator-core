@@ -21,7 +21,7 @@ function isOrderInDb(db, orderId) {
 }
 
 function upsertOrder(db, order) {
-    const addColumnNames = ['processedLocally', 'processedCentrally', 'extraData', 'orderStatus'];
+    const addColumnNames = ['extraData', 'orderStatus', 'stage'];
     let additionalColumns = '';
     let additionalParams = '';
     let vals = [order.id, order.isCreatedCentrally, order.created, order.orderbody];
@@ -50,34 +50,9 @@ function getOrder(db, orderId) {
     return result;
 }
 
-function setOrderAsProcessedLocally(db, orderId) {
-    const stmt = db.prepare("UPDATE OSL_ORDER SET processedLocally=true, processedLocallyAt=DateTime('now') WHERE id=?");
-    stmt.run([orderId]);
-}
-
-function setOrderAsProcessedCentrally(db, orderId) {
-    const stmt = db.prepare("UPDATE OSL_ORDER SET processedCentrally=true, processedCentrallyAt=DateTime('now') WHERE id=?");
-    stmt.run([orderId]);
-}
-
-function setOrderProcessedLocally(db, orderId, processed) {
-    if (processed) {
-        const stmt = db.prepare("UPDATE OSL_ORDER SET processedLocally=true, processedLocallyAt=DateTime('now') WHERE id=?");
-        stmt.run([orderId]);
-    } else {
-        const stmt = db.prepare("UPDATE OSL_ORDER SET processedLocally=false WHERE id=?");
-        stmt.run([orderId]);
-    }
-}
-
-function setOrderProcessedCentrally(db, orderId, processed) {
-    if (processed) {
-        const stmt = db.prepare("UPDATE OSL_ORDER SET processedCentrally=true, processedCentrallyAt=DateTime('now') WHERE id=?");
-        stmt.run([orderId]);
-    } else {
-        const stmt = db.prepare("UPDATE OSL_ORDER SET processedCentrally=false WHERE id=?");
-        stmt.run([orderId]);
-    }
+function setOrderStage(db, orderId, stage) {
+    const stmt = db.prepare("UPDATE OSL_ORDER SET stage=?, stageUpdatedAt=DateTime('now') WHERE id=?");
+    stmt.run([stage, orderId]);
 }
 
 // TODO: do not removew if order is not processed and closed - attrs: closed, completed, status, processed
@@ -91,48 +66,50 @@ function removeClosedOrdersOrAbandoned(db) {
     stmt.run();
 }
 
-function getOrdersNotYetLocallyProcessed(db) {
-    const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE processedLocally = 0 AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC");
+
+
+ function getOrdersNotDone(db) {
+     const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE stage<>'DONE' AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC");
+     const orders = [];
+     const cursor = stmt.iterate();
+     for (const row of cursor) {
+         orders.push(row);
+     }
+     return orders;
+ }
+
+function getOrdersInStage(db, stage) {
+    const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE stage=? AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC");
     const orders = [];
-    const cursor = stmt.iterate();
+    const cursor = stmt.iterate(stage);
     for (const row of cursor) {
         orders.push(row);
     }
     return orders;
 }
 
-function getOrdersNotYetCentrallyProcessed(db) {
-    const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE processedLocally=1 AND processedCentrally = 0 AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC");
-    const orders = [];
-    const cursor = stmt.iterate();
-    for (const row of cursor) {
-        orders.push(row);
-    }
-    return orders;
-}
-
-//TODO: AND NOT orderStatus in ('CLOSED', 'ABANDONED')
-function getOrdersNotYetProcessed(db, { locally, centrally }) {
-    const stmt = db.prepare(`SELECT * FROM OSL_ORDER WHERE processedLocally=${locally ? 1 : 0} AND processedCentrally = ${centrally ? 1: 0} AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC`);
-    const orders = [];
-    const cursor = stmt.iterate();
-    for (const row of cursor) {
-        orders.push(row);
-    }
-    return orders;
-}
+// //TODO: AND NOT orderStatus in ('CLOSED', 'ABANDONED')
+// function getOrdersNotYetProcessed(db, { locally, centrally }) {
+//     const stmt = db.prepare(`SELECT * FROM OSL_ORDER WHERE processedLocally=${locally ? 1 : 0} AND processedCentrally = ${centrally ? 1: 0} AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC`);
+//     const orders = [];
+//     const cursor = stmt.iterate();
+//     for (const row of cursor) {
+//         orders.push(row);
+//     }
+//     return orders;
+// }
 
 function getStats(db) {
     const stmt = db.prepare("SELECT count(1) as cnt from OSL_ORDER");
     const r1 = stmt.get([]);
-    const stmt2 = db.prepare("SELECT count(1) as cnt from OSL_ORDER WHERE processedLocally=1 AND processedCentrally=1");
+    const stmt2 = db.prepare("SELECT stage, count(1) as cnt from OSL_ORDER GROUP BY stage");
     const r2 = stmt2.get([]);
     const stmt3 = db.prepare("SELECT min(created) as minCreated from OSL_ORDER");
     const r3 = stmt3.get([]);
 
     return {
         totalOrders: r1.cnt,
-        processedOrders: r2.cnt,
+        groupByStages: r2.cnt,
         oldestOrderCreatedAt: r3.minCreated,
     };
 }
@@ -143,14 +120,10 @@ module.exports = {
     upsertOrder,
     updateOrderBody,
     getOrder,
+    getOrdersNotDone,
     removeOlderThan,
     removeClosedOrdersOrAbandoned,
-    getOrdersNotYetLocallyProcessed,
-    getOrdersNotYetCentrallyProcessed,
-    getOrdersNotYetProcessed,
-    setOrderAsProcessedLocally,
-    setOrderAsProcessedCentrally,
-    setOrderProcessedLocally,
-    setOrderProcessedCentrally,
+    setOrderStage,
+    getOrdersInStage,
     getStats,
 }

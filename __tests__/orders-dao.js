@@ -26,30 +26,30 @@ test('retrieve order from db', () => {
 //     orderDao.removeOlderThan(db, 2);
 // });
 
-test('getOrdersNotYetLocallyProcessed, check order and condition', () => {
-    const orders = orderDao.getOrdersNotYetLocallyProcessed(db);
-    expect(orders.length).toBe(0);
-    orderDao.setOrderProcessedLocally(db, order1.id, false);
-    const orders2 = orderDao.getOrdersNotYetLocallyProcessed(db);
-    expect(orders2.length).toBe(1);
-    orderDao.setOrderProcessedLocally(db, order1.id, true);
-    const orders3 = orderDao.getOrdersNotYetLocallyProcessed(db);
-    expect(orders3.length).toBe(0);
+test('get order by stage, check order and condition', () => {
+    const orders = orderDao.getOrdersInStage(db, 'SECOND');
+    expect(orders.length).toBe(1);
+    orderDao.setOrderStage(db, order1.id, 'SECOND');
+    const orders2 = orderDao.getOrdersInStage(db, 'SECOND');
+    expect(orders2.length).toBe(2);
+    orderDao.setOrderStage(db, order1.id, 'DONE');
+    const orders3 = orderDao.getOrdersInStage(db, 'SECOND');
+    expect(orders3.length).toBe(1);
 });
 
-test('setOrderProcessedLocally', () => {
-    const orderBefore = orderDao.getOrder(db, order2.id);
-    expect(orderBefore.processedLocally).toBeNull();
-    expect(orderBefore.processedLocallyAt).toBeNull();
-    orderDao.setOrderProcessedLocally(db, order2.id, false);
-    const orderAfter = orderDao.getOrder(db, order2.id);
-    expect(orderAfter.processedLocally).toBe(0);
-    expect(orderAfter.processedLocallyAt).toBeNull();
-    orderDao.setOrderProcessedLocally(db, order2.id, true);
-    const orderAfter2 = orderDao.getOrder(db, order2.id);
-    expect(orderAfter2.processedLocally).toBe(1);
-    expect(orderAfter2.processedLocallyAt).not.toBeNull();
-});
+// test('setOrderProcessedLocally', () => {
+//     const orderBefore = orderDao.getOrder(db, order2.id);
+//     expect(orderBefore.processedLocally).toBeNull();
+//     expect(orderBefore.processedLocallyAt).toBeNull();
+//     orderDao.setOrderProcessedLocally(db, order2.id, false);
+//     const orderAfter = orderDao.getOrder(db, order2.id);
+//     expect(orderAfter.processedLocally).toBe(0);
+//     expect(orderAfter.processedLocallyAt).toBeNull();
+//     orderDao.setOrderProcessedLocally(db, order2.id, true);
+//     const orderAfter2 = orderDao.getOrder(db, order2.id);
+//     expect(orderAfter2.processedLocally).toBe(1);
+//     expect(orderAfter2.processedLocallyAt).not.toBeNull();
+// });
 
 
 test('upsert order with additional columns', () => {
@@ -62,11 +62,11 @@ test('upsert order with additional columns', () => {
             total: 1.34,
         }),
         isCreatedCentrally: 1,
-        processedLocally: 1,
+        stage: 'FIRST',
     }
 
     orderDao.upsertOrder(db, orderA);
-    expect(orderDao.getOrder(db, orderA.id).processedLocally).toBe(1);
+    expect(orderDao.getOrder(db, orderA.id).stage).toBe('FIRST');
 });
 
 test('is created centrally field', () => {
@@ -79,7 +79,7 @@ test('is created centrally field', () => {
             total: 4.56,
         }),
         isCreatedCentrally: 0,
-        processedLocally: 1,
+        stage: 'STAGEX',
     }
     orderDao.upsertOrder(db, orderL);
     expect(orderDao.getOrder(db, orderL.id).isCreatedCentrally).toBe(0);
@@ -106,8 +106,7 @@ test('remove closed orders', () => {
             total: 1.34,
         }),
         orderStatus: 'CLOSED',
-        isCreatedCentrally: 1,
-        processedLocally: 1,
+        stage: 'DONE',
     }
 
     orderDao.upsertOrder(db, orderA);
@@ -125,6 +124,7 @@ const order1 = {
         total: 123.12,
     }),
     isCreatedCentrally: 1,
+    stage: 'FIRST',
 }
 
 var oldDate = new Date();
@@ -138,5 +138,6 @@ const order2 = {
         total: 99.99,
     }),
     isCreatedCentrally: 1,
+    stage: 'SECOND',
 }
 
