@@ -8,6 +8,7 @@ let db = null;
 let jobPurgeOldOrders = null;
 let jobProcessOrders = null;
 let jobStats = null;
+let processOrderCallbackFunction = (order)=>{};
 
 async function addOrderToProcessingQueue(orderData, { stage = 'NEW' , isCreatedCentrally = 1 }={}) {
     const orderRec = {
@@ -42,13 +43,14 @@ function initOrdersQueue({
     statsCallback = null,
     statsCronPattern = '15 * * * * *',
  }) {
+    processOrderCallbackFunction  = processOrderCallback;
     /* run every hour */
     jobPurgeOldOrders = schedule.scheduleJob('0 * * * *', function () {
         purgeOldOrders();
     });
-    if (processOrderCallback) {
+    if (processOrderCallbackFunction) {
         jobProcessOrders = schedule.scheduleJob(`${processOrderCronPattern}`, function () {
-            processOrdersFromDB(processOrderCallback);
+            processOrdersFromDB();
         });
     }
     if (statsCallback) {
@@ -69,11 +71,19 @@ function purgeOldOrders() {
     orderDao.removeClosedOrdersOrAbandoned(db);
 }
 
-function processOrdersFromDB(processOrderCallback) {
+function processOrdersFromDB() {
     const orders = orderDao.getOrdersNotDone(db);
     for (const order of orders) {
-        processOrderCallback(order);
+        processOrderCallbackFunction(order);
     };
+}
+
+function processOrderInstantly(orderId) {
+    setTimeout(()=>{
+        //orderDao.setOrderNextStageRunInSeconds(order.id, 3); 
+        const order = orderDao.getOrder(db, orderId);
+        processOrderCallbackFunction(order); 
+    }, 100); 
 }
 
 function generateStatsFromDB(statsCallback) {    
@@ -106,7 +116,8 @@ module.exports = function (dbFileName) {
         pullOrdersAndAddToProcessingQueue,
         setOrderStage,
         updateOrderBody,
-        getOrder
+        getOrder,
+        processOrderInstantly
     }
     return module;
 }

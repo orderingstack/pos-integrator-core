@@ -20,9 +20,10 @@ const order3 = {
 
 test("add order to queue", async () => {
   ordersService.addOrderToProcessingQueue(order1, {
-    stage: "FIRST",
+    //stage: "FIRST",
     isCreatedCentrally: 1,
   });
+  ordersService.setOrderStage(order1.id, "FIRST");
   const order = await new Promise((resolve) => {
     ordersService.initOrdersQueue({
       processOrderCallback: (order) => {

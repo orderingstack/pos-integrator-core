@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS OSL_ORDER (
     extraData TEXT,
     orderStatus VARCHAR(32),
     stage VARCHAR(32) DEFAULT 'NEW',
-    stageUpdatedAt DATE
+    stageUpdatedAt DATE,
+    nextStageRunAt DATE DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_order_date_desc ON OSL_ORDER (created DESC);
 CREATE INDEX IF NOT EXISTS idx_order_processedlocally_created_desc ON OSL_ORDER (processedLocally, created DESC);

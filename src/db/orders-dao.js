@@ -51,7 +51,7 @@ function getOrder(db, orderId) {
 }
 
 function setOrderStage(db, orderId, stage) {
-    const stmt = db.prepare("UPDATE OSL_ORDER SET stage=?, stageUpdatedAt=DateTime('now') WHERE id=?");
+    const stmt = db.prepare("UPDATE OSL_ORDER SET stage=?, stageUpdatedAt=DateTime('now'), nextStageRunAt=DateTime('now', '+3 seconds') WHERE id=?");
     stmt.run([stage, orderId]);
 }
 
@@ -69,7 +69,7 @@ function removeClosedOrdersOrAbandoned(db) {
 
 
  function getOrdersNotDone(db) {
-     const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE stage<>'DONE' AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC");
+     const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE stage<>'DONE' AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' AND nextStageRunAt<CURRENT_TIMESTAMP ORDER BY created DESC");
      const orders = [];
      const cursor = stmt.iterate();
      for (const row of cursor) {
