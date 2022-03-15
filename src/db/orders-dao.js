@@ -109,7 +109,7 @@ function getStats(db) {
 
     return {
         totalOrders: r1.cnt,
-        groupByStages: r2.cnt,
+        groupByStages: r2,
         oldestOrderCreatedAt: r3.minCreated,
     };
 }
