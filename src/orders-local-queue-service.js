@@ -1,6 +1,7 @@
 const orderDao = require('./db/orders-dao');
 const ordersService = require('./orders-service');
 const schedule = require('node-schedule');
+const {logger} = require('./logger');
 
 const DB_ORDERS_RETENTION_DAYS = 30;
 let db = null;
@@ -26,7 +27,7 @@ async function addOrderToProcessingQueue(orderData, { stage = 'NEW' , isCreatedC
     try {
         orderDao.upsertOrder(db, orderRec);
     } catch (ex) {
-        console.error(ex);
+        logger.error(ex);
     }
 }
 

@@ -1,6 +1,7 @@
 const axios = require('axios');
 const keytar = require('keytar');
 const inquirer = require('inquirer');
+const {logger} = require('./logger');
 
 const authorize = async (baseUrl, tenant, basicAuthPass, username) => {
     const password = await getPassword(username);
@@ -14,15 +15,16 @@ const authorize = async (baseUrl, tenant, basicAuthPass, username) => {
                 'Authorization': `Basic ${basicAuthPass}`,
                 'X-Tenant': tenant
             },
-            data: `username=${username}&password=${password}&grant_type=password&scope=read`,
+            data: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&grant_type=password&scope=read`,
         });
         return {
             authData: response.data,
             err: null
         }
     } catch (error) {
-        console.error('Authorization error');
-        //console.error(error)
+        const errorMessage = (error.response && error.response.data)?error.response.data.error_description:"unknown error";        
+        logger.error(`Authorization error: ${errorMessage}`);
+        //logger.error(error.response)
         return {
             authData: {},
             err: error.response ? error.response.status : error,
@@ -54,11 +56,11 @@ async function getPassword(user) {
 async function checkAndOptionallyAskForCredentials(userName, _authDataProviderCallbackAsync) {
     let token = null;
     do {
-        console.log(`Authorization with user: ${userName}...`);
+        logger.info(`Authorization with user: ${userName}...`);
         const authResult = await _authDataProviderCallbackAsync();
         const access_token = (authResult)?authResult.access_token:null;
         if (!access_token) {
-            console.log('Authorization failed.');
+            logger.warn('Authorization failed.');
             const r = await inquirer.prompt([
                 {
                     type: 'password',
@@ -71,7 +73,7 @@ async function checkAndOptionallyAskForCredentials(userName, _authDataProviderCa
             }
         } else {
             token = access_token;
-            console.log('Auth OK');            
+            logger.info('Auth OK');            
         }
     } while (!token);
     return token;

@@ -1,4 +1,5 @@
 const axios = require('axios');
+const {logger} = require('./logger');
 
 /**
 productsToImport: [
@@ -57,7 +58,7 @@ async function importSingleProduct(productToImport, token, alterProductBeforeImp
 }
 
 async function fetchCurrentProduct(id, token) {
-  //console.log(`fetching product ${id}`);
+  //logger.debug(`fetching product ${id}`);
   let burl = `${process.env.BASE_URL}`;
   burl += burl.endsWith("/") ? "" : "/"
   const url = `${burl}menu-api/api/items/${id}`;
@@ -95,7 +96,7 @@ function initialProductRecordSettings(prod, prodToImport) {
 }
 
 async function saveChangedProduct(prod, token) {
-  //console.log(`saving product ${prod.id}`);
+  //logger.debug(`saving product ${prod.id}`);
   let newProduct = false;
   if (prod.__new) {
     newProduct = true;

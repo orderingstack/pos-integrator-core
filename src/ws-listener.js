@@ -1,5 +1,6 @@
 const StompJs = require('@stomp/stompjs');
 const sjsc = require('sockjs-client');
+const {logger} = require('./logger');
 
 /**
  * Create Stomp on websocket connection to Ordering Stack listening for new orders to process by handlers/callback (onMessageAsync)
@@ -20,7 +21,7 @@ async function connectWebSockets({ tenant, venue, authDataProviderCallbackAsync,
         },
         userUUID: null,
         debug: function (a) {
-            //console.log(a);
+            //logger.debug(a);
         },
         reconnectDelay: 20000,
         heartbeatIncoming: 4000,
@@ -29,7 +30,7 @@ async function connectWebSockets({ tenant, venue, authDataProviderCallbackAsync,
         beforeConnect: async function () {
             const {access_token, UUID} = await authDataProviderCallbackAsync();            
             // if (!accessToken) {
-            //     //console.error('Access token provider error - deactivating socket')
+            //     //logger.error('Access token provider error - deactivating socket')
             //     //client.deactivate();                
             // }
             stompConfig.connectHeaders.login = access_token;
@@ -39,7 +40,7 @@ async function connectWebSockets({ tenant, venue, authDataProviderCallbackAsync,
         onConnect: async function () {
             const accessToken = stompConfig.connectHeaders.login;
             await onConnectedAsync(accessToken);
-            console.log('Websocket connected.');
+            logger.info('Websocket connected.');
             var subscription = client.subscribe(`/kds/${tenant}/${venue}`, async function (data) {
                 var message = JSON.parse(data.body);
                 await onMessageAsync(message);
@@ -66,7 +67,7 @@ async function connectWebSockets({ tenant, venue, authDataProviderCallbackAsync,
 
         onDisconnect: async function () {
             await onDisconnectAsync();
-            console.log('Websocket disconnected.');
+            logger.warn('Websocket disconnected.');
         },
 
         onStompError: function (frame) {
@@ -74,19 +75,17 @@ async function connectWebSockets({ tenant, venue, authDataProviderCallbackAsync,
             // Bad login/passcode typically will cause an error
             // Complaint brokers will set `message` header with a brief message. Body may contain details.
             // Compliant brokers will terminate the connection after any error
-            console.error('Broker reported error: ' + frame.headers['message']);
-            console.error('Additional details: ' + frame.body);
+            logger.error('Broker reported error: ' + frame.headers['message']);
+            logger.error('Additional details: ' + frame.body);
         },
         onWebSocketClose: function (e) {
-            console.log('Websocket closed.');
-            //console.log(e);
+            logger.info('Websocket closed.');
         },
         onWebSocketError: function (e) {
-            console.log('Websocket error.');
-            //console.log(e);
+            logger.error('Websocket error.', e);
         },
         onUnhandledMessage: function (m) {
-            //console.log(m);
+            //logger.debug(m);
         },
         logRawCommunication: true,
         discardWebsocketOnCommFailure: true,

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2022-07-17
+- setLogger to inject logger
+- updated dependencies: better-sqlite3, axios, sockjs-client, keytar 
+- better logs in case of auth errors
+
 ## [1.0.8] - 2022-03-15
 - fix for generating stats for empty db
 

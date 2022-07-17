@@ -1,4 +1,5 @@
 const axios = require("axios");
+const {logger} = require('./logger');
 
 /**
 Pulls open orders for venue. Uses provided access token to authenticate to rest api.   
@@ -6,7 +7,7 @@ Pulls open orders for venue. Uses provided access token to authenticate to rest 
 * @param {*} token - access token   
  */
 async function pullOrders(venue, token) {
-  console.log("Pulling orders...");
+  logger.debug("Pulling orders...");
   let response = null;
   try {
     response = await axios({
@@ -25,7 +26,7 @@ async function pullOrders(venue, token) {
     }
     return orders;
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return [];
   }
 }
@@ -46,7 +47,7 @@ async function updateCentrallyOrderExtraAttr(token, orderId, store) {
     });
     return true;
   } catch (err) {
-    console.log(err);
+    logger.error(err);
     return false;
   }
 }
@@ -66,7 +67,7 @@ async function postNewOrder(token, order) {
 
 async function postOrderPayment(token, order, paymentType) {
   if (parseFloat(order.editTotal) === 0) {
-    //console.log(' <<<<<<<<   TOTAL:  ZERO     <<<<<<');
+    //logger.debug(' <<<<<<<<   TOTAL:  ZERO     <<<<<<');
     return { status: 500, data: { error: "total === 0" } };
   }
   const data = {
@@ -112,7 +113,7 @@ async function postOrderQueueNumber(token, order, queueNumber) {
     venue: order.buckets[0].venue,
     queuePos: queueNumber,
   };
-  console.log("---- post order queue set: >" + queueNumber + "<");
+  logger.debug("---- post order queue set: >" + queueNumber + "<", {orderId:uid});
   try {
     const response = await axios({
       method: "post",
@@ -123,10 +124,10 @@ async function postOrderQueueNumber(token, order, queueNumber) {
       },
       data,
     });
-    console.log("--- post order queue set result :" + response.status);
+    logger.debug("--- post order queue set result :" + response.status, {orderId:uid});
     return response;
   } catch (ex) {
-    console.log(ex);
+    logger.error(ex, {orderId:uid});
     return { status: ex.response.status, data: ex.response.data };
   }
 }
