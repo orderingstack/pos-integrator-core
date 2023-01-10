@@ -3,7 +3,7 @@ const authorization = require('./authorization');
 const orderService = require('./orders-service');
 const ordersQueue = require('./orders-local-queue-service');
 const productService = require('./products-service');
-const {setLogger} = require('./logger');
+const {logger, setLogger} = require('./logger');
 
 module.exports = {
     authorization,
@@ -11,5 +11,6 @@ module.exports = {
     orderService,
     ordersQueue,
     productService,
-    setLogger
+    setLogger,
+    logger,
 }
