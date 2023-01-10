@@ -133,7 +133,10 @@ async function postOrderQueueNumber(token, order, queueNumber) {
 }
 
 
-async function cancelOrder(token, orderId) {
+async function cancelOrder(token, orderId, cancelReason=undefined) {
+  const data = {
+    statusInfo: cancelReason
+  };
   const response = await axios({
     method: "post",
     url: `${process.env.BASE_URL}/ordering-api/api/order/${orderId}/cancel`,
@@ -141,6 +144,7 @@ async function cancelOrder(token, orderId) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
+    data
   });
   return response.data;
 }

@@ -7,8 +7,11 @@ const DB_SCHEMA_FILENAME = path.join(__dirname, './schema.sql'); //require.resol
 
 function createDatabase(dbFileName = DB_FILENAME_DEFAULT) {
     //console.log(`Working with db file: ${dbFileName}`);  
-    //TODO: for file db we shoud ensure that dir exists (good example with fs-extra): 
-    //TODO: const fs = require('fs-extra'); const dir = '/tmp/this/path/does/not/exist'; fs.ensureDirSync(dir);
+    const dir = path.dirname(dbFileName);
+    if (!fs.existsSync(dir)){
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
     db = new Database(dbFileName); //, { verbose: console.log });
     const migration = fs.readFileSync(DB_SCHEMA_FILENAME, 'utf8');
     db.exec(migration);

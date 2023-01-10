@@ -53,6 +53,18 @@ async function getPassword(user) {
     return password;
 }
 
+/*async function getInfoAboutLoggedUser(baseUrl, tenant, accessToken) => {
+    const    response = await axios({
+            method: 'get',
+            url: `${baseUrl}/auth-api/api/me`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+            }
+        });
+        return response.data,
+} */
+
 async function checkAndOptionallyAskForCredentials(userName, _authDataProviderCallbackAsync) {
     let token = null;
     do {
@@ -72,6 +84,7 @@ async function checkAndOptionallyAskForCredentials(userName, _authDataProviderCa
                 savePasswordForUser(userName, r.secret);
             }
         } else {
+            //getInfoAboutLoggedUser()
             token = access_token;
             logger.info('Auth OK');            
         }
