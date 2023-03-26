@@ -1,6 +1,6 @@
 {
   "name": "@orderingstack/pos-integrator-core",
-  "version": "1.2.6",
+  "version": "1.2.8",
   "description": "Ordering Stack POS integrator core - library for easy developing POS integrations with Ordering Stack platform.",
   "scripts": {
     "test": "jest"
@@ -14,7 +14,7 @@
     "better-sqlite3": "^7.6.2",
     "inquirer": "^7.3.3",
     "keytar": "^7.9.0",
-    "node-schedule": "^2.1.0",
+    "node-schedule": "^2.1.1",
     "sockjs-client": "^1.6.1",
     "text-encoding": "^0.7.0",
     "ws": "^7.5.3"
