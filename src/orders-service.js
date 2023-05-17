@@ -1,5 +1,5 @@
 const axios = require("axios");
-const {logger} = require('./logger');
+const { logger } = require('./logger');
 
 /**
 Pulls open orders for venue. Uses provided access token to authenticate to rest api.   
@@ -113,7 +113,6 @@ async function postOrderQueueNumber(token, order, queueNumber) {
     venue: order.buckets[0].venue,
     queuePos: queueNumber,
   };
-  logger.debug("---- post order queue set: >" + queueNumber + "<", {orderId:uid});
   try {
     const response = await axios({
       method: "post",
@@ -124,16 +123,15 @@ async function postOrderQueueNumber(token, order, queueNumber) {
       },
       data,
     });
-    logger.debug("--- post order queue set result :" + response.status, {orderId:uid});
     return response;
-  } catch (ex) {
-    logger.error(ex, {orderId:uid});
-    return { status: ex.response.status, data: ex.response.data };
+  } catch (error) {
+    logger.error("postOrderQueueNumber - error", { error, orderId: uid });
+    return { status: error.response.status, data: error.response.data };
   }
 }
 
 
-async function cancelOrder(token, orderId, cancelReason=undefined) {
+async function cancelOrder(token, orderId, cancelReason = undefined) {
   const data = {
     statusInfo: cancelReason
   };

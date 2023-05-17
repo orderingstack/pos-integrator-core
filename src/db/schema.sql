@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS OSL_ORDER (
     id VARCHAR(34) NOT NULL PRIMARY KEY,
+    checkSeq VARCHAR(32),
     isCreatedCentrally BOOLEAN DEFAULT 1,    
     created DATE,
     processedLocally BOOLEAN DEFAULT null,
@@ -21,3 +22,4 @@ CREATE INDEX IF NOT EXISTS idx_order_processedcentrally_created_desc ON OSL_ORDE
 CREATE INDEX IF NOT EXISTS idx_order_status_desc ON OSL_ORDER (orderStatus DESC);
 CREATE INDEX IF NOT EXISTS idx_order_stage_desc ON OSL_ORDER (stage DESC);
 CREATE INDEX IF NOT EXISTS idx_order_stageupdateddate_desc ON OSL_ORDER (stageUpdatedAt DESC);
+CREATE INDEX IF NOT EXISTS idx_check_seq_desc ON OSL_ORDER (created DESC);

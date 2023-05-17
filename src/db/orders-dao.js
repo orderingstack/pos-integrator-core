@@ -8,8 +8,8 @@ const DB_SCHEMA_FILENAME = path.join(__dirname, './schema.sql'); //require.resol
 function createDatabase(dbFileName = DB_FILENAME_DEFAULT) {
     //console.log(`Working with db file: ${dbFileName}`);  
     const dir = path.dirname(dbFileName);
-    if (!fs.existsSync(dir)){
-      fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
     }
 
     db = new Database(dbFileName); //, { verbose: console.log });
@@ -23,8 +23,13 @@ function isOrderInDb(db, orderId) {
     return (row.count1 === 1);
 }
 
+function isOrderWithCheckSeqInDb(db, checkSeq) {
+    const row = db.prepare("SELECT count() as count1 FROM OSL_ORDER WHERE checkSeq=?").get([checkSeq]);
+    return (row.count1 === 1);
+}
+
 function upsertOrder(db, order) {
-    const addColumnNames = ['extraData', 'orderStatus', 'stage'];
+    const addColumnNames = ['extraData', 'orderStatus', 'stage', 'checkSeq'];
     let additionalColumns = '';
     let additionalParams = '';
     let vals = [order.id, order.isCreatedCentrally, order.created, order.orderbody];
@@ -44,7 +49,7 @@ function upsertOrder(db, order) {
 function updateOrderBody(db, order) {
     const sql = `UPDATE OSL_ORDER SET orderbody=?, orderStatus=? WHERE id=?`;
     const stmt = db.prepare(sql);
-    stmt.run([order.orderbody, order.orderStatus, order.id]);    
+    stmt.run([order.orderbody, order.orderStatus, order.id]);
 }
 
 function getOrder(db, orderId) {
@@ -65,21 +70,21 @@ function removeOlderThan(db, days) {
 }
 
 function removeClosedOrdersOrAbandoned(db) {
-    const stmt = db.prepare("DELETE FROM OSL_ORDER WHERE orderStatus='CLOSED' OR orderStatus='ABANDONED'"); 
+    const stmt = db.prepare("DELETE FROM OSL_ORDER WHERE orderStatus='CLOSED' OR orderStatus='ABANDONED'");
     stmt.run();
 }
 
 
 
- function getOrdersNotDone(db) {
-     const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE stage<>'DONE' AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' AND nextStageRunAt<CURRENT_TIMESTAMP ORDER BY created DESC");
-     const orders = [];
-     const cursor = stmt.iterate();
-     for (const row of cursor) {
-         orders.push(row);
-     }
-     return orders;
- }
+function getOrdersNotDone(db) {
+    const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE stage<>'DONE' AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' AND nextStageRunAt<CURRENT_TIMESTAMP ORDER BY created DESC");
+    const orders = [];
+    const cursor = stmt.iterate();
+    for (const row of cursor) {
+        orders.push(row);
+    }
+    return orders;
+}
 
 function getOrdersInStage(db, stage) {
     const stmt = db.prepare("SELECT * FROM OSL_ORDER WHERE stage=? AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC");
@@ -129,4 +134,5 @@ module.exports = {
     setOrderStage,
     getOrdersInStage,
     getStats,
+    isOrderWithCheckSeqInDb
 }
