@@ -28,11 +28,14 @@ async function connectWebSockets({ tenant, venue, authDataProviderCallbackAsync,
         heartbeatOutgoing: 4000,
 
         beforeConnect: async function () {
-            const {access_token, UUID} = await authDataProviderCallbackAsync();            
-            // if (!accessToken) {
-            //     //logger.error('Access token provider error - deactivating socket')
-            //     //client.deactivate();                
-            // }
+            const authDataResp = await authDataProviderCallbackAsync();            
+            if (!authDataResp) {
+                 logger.error('Access token provider error - deactivating socket')
+                 client.deactivate();                
+                 return;
+            }
+       
+            const {access_token, UUID} = authDataResp;
             stompConfig.connectHeaders.login = access_token;
             stompConfig.userUUID = UUID;
         },

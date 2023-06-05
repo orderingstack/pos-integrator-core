@@ -13,4 +13,4 @@ module.exports = {
     productService,
     setLogger,
     logger,
-}
+}   
