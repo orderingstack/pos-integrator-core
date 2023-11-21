@@ -1,6 +1,6 @@
 import { Database } from 'better-sqlite3';
 import { IOrder } from '@orderingstack/ordering-types';
-import { IOrderRecord } from './types';
+import { IOrderRecord, OrderRecordEditableParams } from './types';
 
 import schedule, { Job } from 'node-schedule';
 
@@ -21,22 +21,29 @@ let processOrderCallbackFunction:
 
 async function addOrderToProcessingQueue(
   orderData: IOrder,
-  { stage = 'NEW', isCreatedCentrally = 1 } = {},
+  {
+    stage = 'NEW',
+    isCreatedCentrally = 1,
+    checkSeq,
+    ...rest
+  }: OrderRecordEditableParams = {},
 ) {
   const orderRec: Partial<IOrderRecord> = {
+    ...rest,
     id: orderData.id,
+    checkSeq,
     created: orderData.created,
     orderStatus: orderData.status || 'NEW',
     orderbody: JSON.stringify(orderData),
   };
-  if (orderDao.isOrderInDb(db, orderRec.id)) {
-    orderDao.updateOrderBody(db, orderRec);
+  if (orderDao.isOrderInDb(db, orderData.id)) {
+    orderDao.updateOrderBody(db, orderRec as IOrderRecord);
     return;
   }
   orderRec.stage = stage;
   orderRec.isCreatedCentrally = isCreatedCentrally;
   try {
-    orderDao.upsertOrder(db, orderRec);
+    orderDao.upsertOrder(db, orderRec as IOrderRecord);
   } catch (ex) {
     logger.error(ex);
   }
@@ -119,6 +126,10 @@ function updateOrderBody(orderRec: IOrderRecord) {
   orderDao.updateOrderBody(db, orderRec);
 }
 
+function isOrderWithCheckSeqInDb(checkSeq: string) {
+  return orderDao.isOrderWithCheckSeqInDb(db, checkSeq);
+}
+
 /**
  * updates orderRecord extraData
  * @param {string} orderId
@@ -148,5 +159,6 @@ export function getOrdersQueue(dbFileName?: string) {
     updateOrderExtraData,
     getOrder,
     processOrderInstantly,
+    isOrderWithCheckSeqInDb,
   };
 }

@@ -6,7 +6,7 @@ import path from 'path';
 const DB_FILENAME_DEFAULT = './data/task.db';
 const DB_SCHEMA_FILENAME = path.join(__dirname, './task.sql'); //require.resolve( './task.sql');
 
-function createDatabase(dbFileName = DB_FILENAME_DEFAULT) {
+function createDatabase(dbFileName = DB_FILENAME_DEFAULT): Database {
   const db = new BetterSqlLite(dbFileName); //, { verbose: console.log });
   const migration = fs.readFileSync(DB_SCHEMA_FILENAME, 'utf8');
   db.exec(migration);

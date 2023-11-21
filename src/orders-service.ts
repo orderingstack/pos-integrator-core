@@ -139,9 +139,6 @@ async function postOrderQueueNumber(
     venue: order.buckets?.[0]?.venue,
     queuePos: queueNumber,
   };
-  logger.debug('---- post order queue set: >' + queueNumber + '<', {
-    orderId: uid,
-  });
   try {
     const response = await axios.post<ICorrelationResponse>(
       `${process.env.BASE_URL}/ordering-api/api/order/${uid}/queuePos`,
@@ -157,9 +154,9 @@ async function postOrderQueueNumber(
       orderId: uid,
     });
     return response;
-  } catch (ex: any) {
-    logger.error(ex, { orderId: uid });
-    return { status: ex.response?.status, data: ex.response?.data };
+  } catch (error: any) {
+    logger.error('postOrderQueueNumber - error', { error, orderId: uid });
+    return { status: error.response?.status, data: error.response?.data };
   }
 }
 

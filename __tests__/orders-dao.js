@@ -124,6 +124,14 @@ test('should save extraData', () => {
   expect(order.extraData).toBe('{"key":"value"}');
 });
 
+test('should save correct types', () => {
+  const noOrder = orderDao.getOrder(db, 'non-existent-id');
+  const order = orderDao.getOrder(db, order1.id);
+  expect(typeof noOrder).toBe('undefined');
+  expect(typeof order).toBe('object');
+  expect(typeof order.isCreatedCentrally).toBe('number');
+});
+
 const order1 = {
   id: 'a296192d-1850-4c2f-8aea-76f859fd682e',
   created: '2020-12-07',

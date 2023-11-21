@@ -7,7 +7,7 @@ import path from 'path';
 const DB_FILENAME_DEFAULT = './data/orders.db';
 const DB_SCHEMA_FILENAME = path.join(__dirname, './schema.sql'); //require.resolve('./schema.sql');
 
-function createDatabase(dbFileName = DB_FILENAME_DEFAULT) {
+function createDatabase(dbFileName = DB_FILENAME_DEFAULT): Database {
   //console.log(`Working with db file: ${dbFileName}`);
   const dir = path.dirname(dbFileName);
   if (!fs.existsSync(dir)) {
@@ -27,11 +27,18 @@ function isOrderInDb(db: Database, orderId: string) {
   return row.count1 === 1;
 }
 
+function isOrderWithCheckSeqInDb(db: Database, checkSeq: string) {
+  const row = db
+    .prepare('SELECT count() as count1 FROM OSL_ORDER WHERE checkSeq=?')
+    .get([checkSeq]) as any;
+  return row.count1 === 1;
+}
+
 function upsertOrder(db: Database, order: IOrderRecord) {
-  const addColumnNames = ['extraData', 'orderStatus', 'stage'];
+  const addColumnNames = ['extraData', 'orderStatus', 'stage', 'checkSeq'];
   let additionalColumns = '';
   let additionalParams = '';
-  let vals = [
+  let vals: any[] = [
     order.id,
     order.isCreatedCentrally,
     order.created,
@@ -75,7 +82,7 @@ function updateOrderExtraData(
 function getOrder(db: Database, orderId: string) {
   const stmt = db.prepare('SELECT * FROM OSL_ORDER WHERE id=?');
   const result = stmt.get([orderId]);
-  return result;
+  return result as IOrderRecord | undefined;
 }
 
 function setOrderStage(db: Database, orderId: string, stage: string) {
@@ -104,10 +111,10 @@ function getOrdersNotDone(db: Database) {
   const stmt = db.prepare(
     "SELECT * FROM OSL_ORDER WHERE stage<>'DONE' AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' AND nextStageRunAt<CURRENT_TIMESTAMP ORDER BY created DESC",
   );
-  const orders = [];
+  const orders: IOrderRecord[] = [];
   const cursor = stmt.iterate();
   for (const row of cursor) {
-    orders.push(row);
+    orders.push(row as IOrderRecord);
   }
   return orders;
 }
@@ -116,10 +123,10 @@ function getOrdersInStage(db: Database, stage: string) {
   const stmt = db.prepare(
     "SELECT * FROM OSL_ORDER WHERE stage=? AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC",
   );
-  const orders = [];
+  const orders: IOrderRecord[] = [];
   const cursor = stmt.iterate(stage);
   for (const row of cursor) {
-    orders.push(row);
+    orders.push(row as IOrderRecord);
   }
   return orders;
 }
@@ -165,4 +172,5 @@ module.exports = {
   setOrderStage,
   getOrdersInStage,
   getStats,
+  isOrderWithCheckSeqInDb,
 };
