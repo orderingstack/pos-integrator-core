@@ -1,6 +1,6 @@
 import { IOrder } from '@orderingstack/ordering-types';
 
-import axios from 'axios';
+import axios, { isAxiosError } from 'axios';
 const { logger } = require('./logger');
 
 interface ICorrelationResponse {
@@ -184,10 +184,34 @@ async function cancelOrder(
   return response.data;
 }
 
+async function getOrder(
+  token: string,
+  orderId: string,
+): Promise<{ notFound?: boolean; order?: IOrder; error?: any }> {
+  try {
+    const response = await axios.get<IOrder>(
+      `${process.env.BASE_URL}/ordering-api/api/orders/${orderId}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    return { order: response.data };
+  } catch (e: any) {
+    if (isAxiosError(e) && e.response?.status === 404) {
+      return { notFound: true };
+    }
+    return { error: e };
+  }
+}
+
 export const orderService = {
   pullOrders,
   updateCentrallyOrderExtraAttr,
   postNewOrder,
+  getOrder,
   setOrderLinesProcessed,
   postOrderQueueNumber,
   postOrderPayment,
