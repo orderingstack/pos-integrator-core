@@ -1,7 +1,7 @@
 const orderDao = require('./db/orders-dao');
 const ordersService = require('./orders-service');
 const schedule = require('node-schedule');
-const {logger} = require('./logger');
+const { logger } = require('./logger');
 
 const DB_ORDERS_RETENTION_DAYS = 30;
 let db = null;
@@ -9,11 +9,12 @@ let db = null;
 let jobPurgeOldOrders = null;
 let jobProcessOrders = null;
 let jobStats = null;
-let processOrderCallbackFunction = (order)=>{};
+let processOrderCallbackFunction = (order) => { };
 
-async function addOrderToProcessingQueue(orderData, { stage = 'NEW' , isCreatedCentrally = 1 }={}) {
+async function addOrderToProcessingQueue(orderData, { stage = 'NEW', isCreatedCentrally = 1, checkSeq } = {}) {
     const orderRec = {
         id: orderData.id,
+        checkSeq,
         created: orderData.created,
         orderStatus: orderData.status || 'NEW',
         orderbody: JSON.stringify(orderData)
@@ -38,13 +39,13 @@ async function pullOrdersAndAddToProcessingQueue(venue, token) {
     };
 }
 
-function initOrdersQueue({ 
-    processOrderCallback, 
-    processOrderCronPattern = '*/2 * * * * *', 
+function initOrdersQueue({
+    processOrderCallback,
+    processOrderCronPattern = '*/2 * * * * *',
     statsCallback = null,
     statsCronPattern = '15 * * * * *',
- }) {
-    processOrderCallbackFunction  = processOrderCallback;
+}) {
+    processOrderCallbackFunction = processOrderCallback;
     /* run every hour */
     jobPurgeOldOrders = schedule.scheduleJob('0 * * * *', function () {
         purgeOldOrders();
@@ -80,14 +81,14 @@ function processOrdersFromDB() {
 }
 
 function processOrderInstantly(orderId) {
-    setTimeout(()=>{
+    setTimeout(() => {
         //orderDao.setOrderNextStageRunInSeconds(order.id, 3); 
         const order = orderDao.getOrder(db, orderId);
-        processOrderCallbackFunction(order); 
-    }, 100); 
+        processOrderCallbackFunction(order);
+    }, 100);
 }
 
-function generateStatsFromDB(statsCallback) {    
+function generateStatsFromDB(statsCallback) {
     const stats = orderDao.getStats(db);
     statsCallback(stats);
 }
@@ -98,6 +99,10 @@ function setOrderStage(orderId, stage) {
 
 function updateOrderBody(orderRec) {
     orderDao.updateOrderBody(db, orderRec);
+}
+
+function isOrderWithCheckSeqInDb(checkSeq) {
+    return orderDao.isOrderWithCheckSeqInDb(db, checkSeq);
 }
 
 function getOrder(orderId) {
@@ -118,7 +123,8 @@ module.exports = function (dbFileName) {
         setOrderStage,
         updateOrderBody,
         getOrder,
-        processOrderInstantly
+        processOrderInstantly,
+        isOrderWithCheckSeqInDb
     }
     return module;
 }
