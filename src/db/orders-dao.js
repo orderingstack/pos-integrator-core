@@ -6,7 +6,7 @@ const DB_FILENAME_DEFAULT = './data/orders.db';
 const DB_SCHEMA_FILENAME = path.join(__dirname, './schema.sql'); //require.resolve('./schema.sql');
 
 function createDatabase(dbFileName = DB_FILENAME_DEFAULT) {
-    //console.log(`Working with db file: ${dbFileName}`);  
+    //console.log(`Working with db file: ${dbFileName}`);
     const dir = path.dirname(dbFileName);
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -65,7 +65,7 @@ function setOrderStage(db, orderId, stage) {
 
 // TODO: do not removew if order is not processed and closed - attrs: closed, completed, status, processed
 function removeOlderThan(db, days) {
-    const stmt = db.prepare("DELETE FROM OSL_ORDER WHERE created < date('now','-'||?||' days')"); //date('now','-4 days')"); 
+    const stmt = db.prepare("DELETE FROM OSL_ORDER WHERE created < date('now','-'||?||' days')"); //date('now','-4 days')");
     stmt.run([days]);
 }
 

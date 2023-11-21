@@ -82,7 +82,7 @@ function processOrdersFromDB() {
 
 function processOrderInstantly(orderId) {
     setTimeout(() => {
-        //orderDao.setOrderNextStageRunInSeconds(order.id, 3); 
+        //orderDao.setOrderNextStageRunInSeconds(order.id, 3);
         const order = orderDao.getOrder(db, orderId);
         processOrderCallbackFunction(order);
     }, 100);

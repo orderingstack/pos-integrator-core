@@ -2,9 +2,9 @@ const axios = require("axios");
 const { logger } = require('./logger');
 
 /**
-Pulls open orders for venue. Uses provided access token to authenticate to rest api.   
-* @param {*} venue - we pull orders for this venue  
-* @param {*} token - access token   
+Pulls open orders for venue. Uses provided access token to authenticate to rest api.
+* @param {*} venue - we pull orders for this venue
+* @param {*} token - access token
  */
 async function pullOrders(venue, token) {
   logger.debug("Pulling orders...");
