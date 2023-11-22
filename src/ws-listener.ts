@@ -3,7 +3,7 @@ import {
   IOrder,
   ISteeringCommand,
 } from '@orderingstack/ordering-types';
-import StompJs from '@stomp/stompjs';
+const StompJs = require('@stomp/stompjs');
 import sjsc from 'sockjs-client';
 import { logger } from './logger';
 
@@ -73,7 +73,7 @@ export async function connectWebSockets({
       logger.info('Websocket connected.');
       var subscription = client.subscribe(
         `/kds/${tenant}/${venue}`,
-        async function (data) {
+        async function (data: any) {
           var message = JSON.parse(data.body);
           await onMessageAsync(message);
         },
@@ -81,7 +81,7 @@ export async function connectWebSockets({
       if (onOrdersUpdateAsync) {
         var subscriptionForOrdersUpdate = client.subscribe(
           `/order-changes/${tenant}/${stompConfig.userUUID}`,
-          async function (data) {
+          async function (data: any) {
             var message = JSON.parse(data.body);
             await onOrdersUpdateAsync(message);
           },
@@ -90,7 +90,7 @@ export async function connectWebSockets({
       if (onNotificationAsync) {
         var subscriptionForNotifications = client.subscribe(
           `/notifications/${tenant}/${stompConfig.userUUID}`,
-          async function (data) {
+          async function (data: any) {
             var message = JSON.parse(data.body);
             await onNotificationAsync(message);
           },
@@ -99,7 +99,7 @@ export async function connectWebSockets({
       if (onSteeringCommandAsync) {
         const subscriptionForSteeringCmds = client.subscribe(
           `/steering/${tenant}/${venue}`,
-          async function (data) {
+          async function (data: any) {
             var message = JSON.parse(data.body);
             await onSteeringCommandAsync(message);
           },
