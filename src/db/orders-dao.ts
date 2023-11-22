@@ -58,6 +58,11 @@ function upsertOrder(db: Database, order: IOrderRecord) {
   stmt.run(vals);
 }
 
+/**
+ * Updates orderbody & orderStatus
+ * @param db
+ * @param order
+ */
 function updateOrderBody(db: Database, order: IOrderRecord) {
   const sql = `UPDATE OSL_ORDER SET orderbody=?, orderStatus=? WHERE id=?`;
   const stmt = db.prepare(sql);

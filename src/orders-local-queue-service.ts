@@ -1,12 +1,10 @@
 import { Database } from 'better-sqlite3';
 import { IOrder } from '@orderingstack/ordering-types';
 import { IOrderRecord, OrderRecordEditableParams } from './types';
-
 import schedule, { Job } from 'node-schedule';
-
+import { logger } from './logger';
+import { orderService } from './orders-service';
 const orderDao = require('./db/orders-dao');
-const ordersService = require('./orders-service');
-const { logger } = require('./logger');
 
 const DB_ORDERS_RETENTION_DAYS = 30;
 let db: Database;
@@ -50,7 +48,7 @@ async function addOrderToProcessingQueue(
 }
 
 async function pullOrdersAndAddToProcessingQueue(venue: string, token: string) {
-  const orders = await ordersService.pullOrders(venue, token);
+  const orders = await orderService.pullOrders(venue, token);
   for (const order of orders) {
     addOrderToProcessingQueue(order);
   }

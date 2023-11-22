@@ -1,7 +1,6 @@
 import { IOrder } from '@orderingstack/ordering-types';
-
 import axios, { isAxiosError } from 'axios';
-const { logger } = require('./logger');
+import { logger } from './logger';
 
 interface ICorrelationResponse {
   correlationId: string;
