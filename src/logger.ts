@@ -28,11 +28,14 @@ export function setLogger(
   },
 ) {
   //console.log('--- setting new logger:  '+newLogger);
-  logger.debug = newLogger.debug;
-  logger.info = newLogger.info;
-
-  logger.warn = newLogger.warn;
-  logger.error = newLogger.error;
+  // @ts-ignore
+  logger.debug = (...args) => newLogger.debug(...args);
+  // @ts-ignore
+  logger.info = (...args) => newLogger.info(...args);
+  // @ts-ignore
+  logger.warn = (...args) => newLogger.warn(...args);
+  // @ts-ignore
+  logger.error = (...args) => newLogger.error(...args);
   if (
     newLogger.child &&
     typeof newLogger.child === 'function' &&
@@ -48,9 +51,11 @@ export function setLogger(
     typeof newLogger.trackMetric === 'function' &&
     logger != newLogger
   ) {
-    logger.trackMetric = newLogger.trackMetric;
+    // @ts-ignore
+    logger.trackMetric = (...args) => newLogger.trackMetric(...args);
   }
   if (typeof newLogger.trackEvent === 'function' && logger != newLogger) {
-    logger.trackEvent = newLogger.trackEvent;
+    // @ts-ignore
+    logger.trackEvent = (...args) => newLogger.trackEvent(...args);
   }
 }
