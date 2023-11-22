@@ -27,7 +27,8 @@ function isOrderInDb(db: Database, orderId: string) {
   return row.count1 === 1;
 }
 
-function isOrderWithCheckSeqInDb(db: Database, checkSeq: string) {
+function isOrderWithCheckSeqInDb(db: Database, checkSeq: string | undefined) {
+  if (!checkSeq) return false;
   const row = db
     .prepare('SELECT count() as count1 FROM OSL_ORDER WHERE checkSeq=?')
     .get([checkSeq]) as any;

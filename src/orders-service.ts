@@ -65,16 +65,14 @@ async function updateCentrallyOrderExtraAttr(
 }
 
 async function postNewOrder(token: string, order: IOrder) {
-  const response = await axios.post<ICorrelationResponse>(
-    `${process.env.BASE_URL}/ordering-api/api/order/new`,
-    order,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+  const response = await axios.post<
+    ICorrelationResponse & { lines?: string[] }
+  >(`${process.env.BASE_URL}/ordering-api/api/order/new`, order, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
     },
-  );
+  });
   return response.data;
 }
 

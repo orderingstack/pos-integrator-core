@@ -126,7 +126,7 @@ function updateOrderBody(orderRec: IOrderRecord) {
   orderDao.updateOrderBody(db, orderRec);
 }
 
-function isOrderWithCheckSeqInDb(checkSeq: string) {
+function isOrderWithCheckSeqInDb(checkSeq: string | undefined) {
   return orderDao.isOrderWithCheckSeqInDb(db, checkSeq);
 }
 
