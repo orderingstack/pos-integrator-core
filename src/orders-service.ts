@@ -1,5 +1,5 @@
 import { IOrder } from '@orderingstack/ordering-types';
-import axios, { isAxiosError } from 'axios';
+import axios from 'axios';
 import { logger } from './logger';
 
 interface ICorrelationResponse {
@@ -194,7 +194,7 @@ async function getOrder(
     );
     return { order: response.data };
   } catch (e: any) {
-    if (isAxiosError(e) && e.response?.status === 404) {
+    if (e.response?.status === 404) {
       return { notFound: true };
     }
     return { error: e };

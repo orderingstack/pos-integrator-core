@@ -1,6 +1,6 @@
 {
   "name": "@orderingstack/pos-integrator-core",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Ordering Stack POS integrator core - library for easy developing POS integrations with Ordering Stack platform.",
   "scripts": {
     "test": "jest",
@@ -20,7 +20,7 @@
   ],
   "dependencies": {
     "@stomp/stompjs": "6.0.0",
-    "axios": "^1.6.2",
+    "axios": "^0.27.2",
     "better-sqlite3": "^7.6.2",
     "inquirer": "^7.3.3",
     "keytar": "^7.9.0",
