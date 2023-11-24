@@ -124,7 +124,7 @@ function updateOrderBody(orderRec: IOrderRecord) {
   orderDao.updateOrderBody(db, orderRec);
 }
 
-function isOrderWithCheckSeqInDb(checkSeq: string | undefined) {
+function isOrderWithCheckSeqInDb(checkSeq: string | undefined): boolean {
   return orderDao.isOrderWithCheckSeqInDb(db, checkSeq);
 }
 
@@ -137,7 +137,7 @@ function updateOrderExtraData(orderId: string, extraData: string) {
   orderDao.updateOrderExtraData(db, orderId, extraData);
 }
 
-function getOrder(orderId: string) {
+function getOrder(orderId: string): IOrderRecord | undefined {
   return orderDao.getOrder(db, orderId);
 }
 
