@@ -97,7 +97,7 @@ function purgeOldOrders() {
 }
 
 function processOrdersFromDB() {
-  const orders = orderDao.getOrdersNotDone(db);
+  const orders = orderDao.getOrdersToProcess(db);
   for (const order of orders) {
     processOrderCallbackFunction?.(order);
   }
@@ -141,6 +141,10 @@ function getOrder(orderId: string): IOrderRecord | undefined {
   return orderDao.getOrder(db, orderId);
 }
 
+function getOpenOrders(): IOrderRecord[] {
+  return orderDao.getOpenOrders(db);
+}
+
 export function getOrdersQueue(dbFileName?: string) {
   if (dbFileName) {
     db = orderDao.createDatabase(dbFileName);
@@ -156,6 +160,7 @@ export function getOrdersQueue(dbFileName?: string) {
     updateOrderBody,
     updateOrderExtraData,
     getOrder,
+    getOpenOrders,
     processOrderInstantly,
     isOrderWithCheckSeqInDb,
   };
