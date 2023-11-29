@@ -113,9 +113,21 @@ function removeClosedOrdersOrAbandoned(db: Database) {
   stmt.run();
 }
 
-function getOrdersNotDone(db: Database) {
+function getOrdersToProcess(db: Database) {
   const stmt = db.prepare(
     "SELECT * FROM OSL_ORDER WHERE stage<>'DONE' AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' AND nextStageRunAt<CURRENT_TIMESTAMP ORDER BY created DESC",
+  );
+  const orders: IOrderRecord[] = [];
+  const cursor = stmt.iterate();
+  for (const row of cursor) {
+    orders.push(row as IOrderRecord);
+  }
+  return orders;
+}
+
+function getOpenOrders(db: Database) {
+  const stmt = db.prepare(
+    "SELECT * FROM OSL_ORDER WHERE stage<>'DONE' AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC",
   );
   const orders: IOrderRecord[] = [];
   const cursor = stmt.iterate();
@@ -172,7 +184,8 @@ module.exports = {
   updateOrderBody,
   updateOrderExtraData,
   getOrder,
-  getOrdersNotDone,
+  getOrdersToProcess,
+  getOpenOrders,
   removeOlderThan,
   removeClosedOrdersOrAbandoned,
   setOrderStage,
