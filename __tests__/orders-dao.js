@@ -9,11 +9,22 @@ test('upsert order and check is it is added', () => {
   expect(orderDao.isOrderInDb(db, order1.id)).toBe(true);
   orderDao.upsertOrder(db, order2);
   expect(orderDao.isOrderInDb(db, order2.id)).toBe(true);
+  orderDao.upsertOrder(db, orderAbandoned);
+  expect(orderDao.isOrderInDb(db, orderAbandoned.id)).toBe(true);
+  orderDao.upsertOrder(db, orderClosed);
+  expect(orderDao.isOrderInDb(db, orderClosed.id)).toBe(true);
 });
+
+test('retrieves CLOSED and ABANDONED orders for processing if stage !== DONE', async () => {
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  const orders = orderDao.getOrdersToProcess(db);
+  expect(orders.some((o) => o.orderStatus === 'ABANDONED')).toBe(true);
+  expect(orders.some((o) => o.orderStatus === 'CLOSED')).toBe(true);
+}, 4000);
 
 test('check stats', () => {
   const stats = orderDao.getStats(db);
-  expect(stats.totalOrders).toBe(2);
+  expect(stats.totalOrders).toBe(4);
 });
 
 test('retrieve order from db', () => {
@@ -27,13 +38,13 @@ test('retrieve order from db', () => {
 
 test('get order by stage, check order and condition', () => {
   const orders = orderDao.getOrdersInStage(db, 'SECOND');
-  expect(orders.length).toBe(1);
+  expect(orders.length).toBe(3);
   orderDao.setOrderStage(db, order1.id, 'SECOND');
   const orders2 = orderDao.getOrdersInStage(db, 'SECOND');
-  expect(orders2.length).toBe(2);
+  expect(orders2.length).toBe(4);
   orderDao.setOrderStage(db, order1.id, 'DONE');
   const orders3 = orderDao.getOrdersInStage(db, 'SECOND');
-  expect(orders3.length).toBe(1);
+  expect(orders3.length).toBe(3);
 });
 
 // test('setOrderProcessedLocally', () => {
@@ -110,7 +121,7 @@ test('remove closed orders', () => {
   orderDao.upsertOrder(db, orderA);
   expect(orderDao.getStats(db).totalOrders).toBe(initialTotalOrders + 1);
   orderDao.removeClosedOrdersOrAbandoned(db);
-  expect(orderDao.getStats(db).totalOrders).toBe(initialTotalOrders);
+  expect(orderDao.getStats(db).totalOrders).toBe(initialTotalOrders - 2);
 });
 
 test('should save extraData', () => {
@@ -153,6 +164,30 @@ const order2 = {
   orderbody: JSON.stringify({
     id: 'f53d99fc-63e0-4a51-a9cd-0d3706d189dc',
     total: 99.99,
+  }),
+  isCreatedCentrally: 1,
+  stage: 'SECOND',
+};
+
+const orderAbandoned = {
+  id: '411fe885-4980-4ecf-bbb2-5a3f28506c65',
+  created: new Date().toISOString(),
+  orderStatus: 'ABANDONED',
+  orderbody: JSON.stringify({
+    id: '411fe885-4980-4ecf-bbb2-5a3f28506c65',
+    total: 123.12,
+  }),
+  isCreatedCentrally: 1,
+  stage: 'SECOND',
+};
+
+const orderClosed = {
+  id: '4f2cda27-427c-48b3-a2ad-19a30d57b329',
+  created: new Date().toISOString(),
+  orderStatus: 'CLOSED',
+  orderbody: JSON.stringify({
+    id: '4f2cda27-427c-48b3-a2ad-19a30d57b329',
+    total: 123.12,
   }),
   isCreatedCentrally: 1,
   stage: 'SECOND',

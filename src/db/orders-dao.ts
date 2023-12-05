@@ -115,7 +115,7 @@ function removeClosedOrdersOrAbandoned(db: Database) {
 
 function getOrdersToProcess(db: Database) {
   const stmt = db.prepare(
-    "SELECT * FROM OSL_ORDER WHERE stage<>'DONE' AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' AND nextStageRunAt<CURRENT_TIMESTAMP ORDER BY created DESC",
+    "SELECT * FROM OSL_ORDER WHERE stage<>'DONE' AND nextStageRunAt<CURRENT_TIMESTAMP ORDER BY created DESC",
   );
   const orders: IOrderRecord[] = [];
   const cursor = stmt.iterate();
@@ -127,7 +127,7 @@ function getOrdersToProcess(db: Database) {
 
 function getOpenOrders(db: Database) {
   const stmt = db.prepare(
-    "SELECT * FROM OSL_ORDER WHERE stage<>'DONE' AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC",
+    "SELECT * FROM OSL_ORDER WHERE stage<>'DONE' ORDER BY created DESC",
   );
   const orders: IOrderRecord[] = [];
   const cursor = stmt.iterate();
@@ -139,7 +139,7 @@ function getOpenOrders(db: Database) {
 
 function getOrdersInStage(db: Database, stage: string) {
   const stmt = db.prepare(
-    "SELECT * FROM OSL_ORDER WHERE stage=? AND orderStatus<>'CLOSED' AND orderStatus<>'ABANDONED' ORDER BY created DESC",
+    'SELECT * FROM OSL_ORDER WHERE stage=? ORDER BY created DESC',
   );
   const orders: IOrderRecord[] = [];
   const cursor = stmt.iterate(stage);
