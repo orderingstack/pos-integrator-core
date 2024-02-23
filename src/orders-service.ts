@@ -201,6 +201,42 @@ async function getOrder(
   }
 }
 
+async function appendLinesToOrder(
+  token: string,
+  orderId: string,
+  venue: string,
+  lines: Array<{
+    productId: string;
+    status: 'NEW' | 'CONFIRMED';
+    quantity: number;
+    price?: number;
+    productConfig?: any;
+    comment?: string;
+    extra?: any;
+  }>,
+) {
+  try {
+    const response = await axios.post<{
+      correlationId: string;
+      orderId: string;
+      lines: string[];
+    }>(
+      `${process.env.BASE_URL}/ordering-api/api/order/${orderId}/append`,
+      { venue, lines },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    return { data: response.data };
+  } catch (e: any) {
+    console.error(e);
+    return { error: e };
+  }
+}
+
 export const orderService = {
   pullOrders,
   updateCentrallyOrderExtraAttr,
@@ -210,4 +246,5 @@ export const orderService = {
   postOrderQueueNumber,
   postOrderPayment,
   cancelOrder,
+  appendLinesToOrder,
 };
