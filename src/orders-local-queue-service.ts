@@ -120,6 +120,10 @@ function setOrderStage(orderId: string, stage: string) {
   orderDao.setOrderStage(db, orderId, stage);
 }
 
+function setNextRunInSeconds(orderId: string, seconds: number) {
+  orderDao.setNextRunInSeconds(db, orderId, seconds);
+}
+
 function updateOrderBody(orderRec: IOrderRecord) {
   orderDao.updateOrderBody(db, orderRec);
 }
@@ -157,6 +161,7 @@ export function getOrdersQueue(dbFileName?: string) {
     addOrderToProcessingQueue,
     pullOrdersAndAddToProcessingQueue,
     setOrderStage,
+    setNextRunInSeconds,
     updateOrderBody,
     updateOrderExtraData,
     getOrder,

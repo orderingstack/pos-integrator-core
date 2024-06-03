@@ -98,6 +98,13 @@ function setOrderStage(db: Database, orderId: string, stage: string) {
   stmt.run([stage, orderId]);
 }
 
+function setNextRunInSeconds(db: Database, orderId: string, seconds: number) {
+  const stmt = db.prepare(
+    "UPDATE OSL_ORDER SET nextStageRunAt=DateTime('now', '+? seconds') WHERE id=?",
+  );
+  stmt.run([seconds, orderId]);
+}
+
 // TODO: do not removew if order is not processed and closed - attrs: closed, completed, status, processed
 function removeOlderThan(db: Database, days: number) {
   const stmt = db.prepare(
@@ -192,4 +199,5 @@ module.exports = {
   getOrdersInStage,
   getStats,
   isOrderWithCheckSeqInDb,
+  setNextRunInSeconds,
 };
