@@ -9,165 +9,199 @@ import {
   PollForTokenResponse,
 } from './types';
 
-export const authorizeWithPassword = async (
-  baseUrl: string,
-  tenant: string,
-  basicAuthPass: string,
-  username: string,
-) => {
-  const password = await getPassword(username);
-  let response = null;
-  try {
-    response = await axios({
-      method: 'post',
-      url: `${baseUrl}/auth-oauth2/oauth/token`,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        Authorization: `Basic ${basicAuthPass}`,
-        'X-Tenant': tenant,
-      },
-      data: `username=${encodeURIComponent(
-        username,
-      )}&password=${encodeURIComponent(
-        password!,
-      )}&grant_type=password&scope=read`,
-    });
-    //@ts-ignore
-    const authData: AuthData = response.data;
-    return {
-      authData,
-      err: null,
-    };
-  } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.error_description || 'unknown error';
-    logger.error(`Authorization error: ${errorMessage}`);
-    //logger.error(error.response)
-    return {
-      err: error.response ? error.response.status : error,
-      errMsg: error.response
-        ? error.response.statusText + ' ' + error.response.status
-        : '',
-    };
-  }
-};
+class AuthService {
+  private readonly service = 'OrderingStack';
+  private readonly refreshAccount = 'refreshToken';
+  private accessToken: string | null = null;
+  private accessTokenExpiresAt: number | null = null;
+  private baseUrl: string | null = null;
+  private tenantId: string | null = null;
+  private basicAuth: string | null = null;
+  private username: string | null = null;
+  private moduleId: string | null = null;
 
-export const authorize = async (
-  baseUrl: string,
-  tenant: string,
-  basicAuthPass: string,
-  username: string,
-  moduleId?: string,
-): Promise<{ authData?: AuthData; err?: any; errMsg?: string }> => {
-  if (moduleId) {
-    const { data, error } = await authorizeWithDeviceCode(
-      baseUrl,
-      tenant,
-      basicAuthPass,
-      moduleId,
-    );
-    if (error || !data) {
-      return { err: error, errMsg: error.message };
-    }
-    return { authData: data };
-  }
-  const res = await authorizeWithPassword(
-    baseUrl,
-    tenant,
-    basicAuthPass,
-    username,
-  );
-  return res;
-};
-
-let _internalCredentials: { user: string | null; password: string | null } = {
-  user: null,
-  password: null,
-};
-export function setInternalCredentials(user: string, password: string) {
-  _internalCredentials = {
-    user,
-    password,
+  private internalCredentials = {
+    user: null as string | null,
+    password: null as string | null,
   };
-}
 
-export async function savePasswordForUser(user: string, password: string) {
-  await keytar.setPassword('OrderingStack', user, password);
-}
-
-async function getPassword(user: string) {
-  if (_internalCredentials.user === user) {
-    return _internalCredentials.password;
+  initialize(
+    baseUrl: string,
+    tenantId: string,
+    basicAuthPass: string,
+    username: string,
+    moduleId?: string,
+  ) {
+    this.baseUrl = baseUrl;
+    this.tenantId = tenantId;
+    this.basicAuth = basicAuthPass;
+    this.username = username;
+    this.moduleId = moduleId || null;
   }
-  const password = await keytar.getPassword('OrderingStack', user);
-  return password;
-}
 
-export async function checkAndOptionallyAskForCredentials(
-  userName: string,
-  _authDataProviderCallbackAsync: () => Promise<any>,
-) {
-  let token = null;
-  do {
-    logger.info(`Authorization with user: ${userName}...`);
-    const authResult = await _authDataProviderCallbackAsync();
-    const access_token = authResult ? authResult.access_token : null;
-    if (!access_token) {
-      logger.warn('Authorization failed.');
-      const r = await inquirer.prompt([
-        {
-          type: 'password',
-          name: 'secret',
-          message: `Enter password for [${userName}]:`,
-        },
-      ]);
-      if (r.secret) {
-        savePasswordForUser(userName, r.secret);
-      }
+  async authorize(
+    baseUrl: string,
+    tenantId: string,
+    basicAuthPass: string,
+    username: string,
+    moduleId?: string,
+  ): Promise<{ authData?: AuthData; err?: any; errMsg?: string }> {
+    this.baseUrl = baseUrl;
+    this.tenantId = tenantId;
+    this.basicAuth = basicAuthPass;
+    this.username = username;
+    this.moduleId = moduleId || null;
+    if (moduleId) {
+      logger.info(`Authorization with device code for module: ${moduleId}...`);
+      const { data, error } = await this.authorizeWithDeviceCode(
+        baseUrl,
+        tenantId,
+        basicAuthPass,
+        moduleId,
+      );
+      if (error) return { err: error, errMsg: error.message };
+      this.accessToken = data?.access_token;
+      this.accessTokenExpiresAt = Date.now() + data?.expires_in * 1000;
+      return { authData: data };
     } else {
-      //getInfoAboutLoggedUser()
-      token = access_token;
-      logger.info('Auth OK');
+      const res = await this.authorizeWithPassword(
+        baseUrl,
+        tenantId,
+        basicAuthPass,
+        username,
+      );
+      if (res.authData) {
+        this.accessToken = res.authData.access_token;
+        this.accessTokenExpiresAt = Date.now() + res.authData.expires_in * 1000;
+      }
+
+      return res;
     }
-  } while (!token);
-  return token;
-}
+  }
 
-const refreshStorageHandler = {
-  SERVICE: 'OrderingStack',
-  ACCOUNT: 'refreshToken',
-  getRefreshToken: () =>
-    keytar.getPassword(
-      refreshStorageHandler.SERVICE,
-      refreshStorageHandler.ACCOUNT,
-    ),
-  setRefreshToken: (token: string) => {
-    keytar.setPassword(
-      refreshStorageHandler.SERVICE,
-      refreshStorageHandler.ACCOUNT,
-      token,
-    );
-  },
-  clearRefreshToken: () => {
-    keytar.deletePassword(
-      refreshStorageHandler.SERVICE,
-      refreshStorageHandler.ACCOUNT,
-    );
-  },
-};
+  async getAccessToken(): Promise<string> {
+    const now = Date.now();
+    const isTokenValid =
+      this.accessToken &&
+      this.accessTokenExpiresAt &&
+      this.accessTokenExpiresAt - now > 5 * 60 * 1000;
 
-async function getDeviceCode(
-  baseUrl: string,
-  basicAuth: string,
-  tenantId: string,
-  moduleId: string,
-) {
-  try {
-    const response = await axios.post(
+    if (isTokenValid) {
+      return this.accessToken!;
+    }
+
+    logger.info('Token expired or near expiry. Re-authorizing...');
+    const isInitialized = this.baseUrl && this.tenantId && this.basicAuth;
+    if (!isInitialized) {
+      throw new Error('Authorization not initialized');
+    }
+    await this.authorize(
+      this.baseUrl!,
+      this.tenantId!,
+      this.basicAuth!,
+      this.username!,
+      this.moduleId!,
+    );
+    return this.accessToken!;
+  }
+
+  async authorizeWithPassword(
+    baseUrl: string,
+    tenantId: string,
+    basicAuthPass: string,
+    username: string,
+  ): Promise<{ authData?: AuthData; err?: any; errMsg?: string }> {
+    const password = await this.getPassword(username);
+    try {
+      const response = await axios.post(
+        `${baseUrl}/auth-oauth2/oauth/token`,
+        null,
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            Authorization: `Basic ${basicAuthPass}`,
+            'X-Tenant': tenantId,
+          },
+          data: `username=${encodeURIComponent(
+            username,
+          )}&password=${encodeURIComponent(
+            password!,
+          )}&grant_type=password&scope=read`,
+        },
+      );
+      return { authData: response.data as AuthData, err: null };
+    } catch (error: any) {
+      const errMsg = error?.response?.statusText || 'unknown error';
+      logger.error(`Authorization error: ${errMsg}`);
+      return {
+        err: error.response?.status || error,
+        errMsg: error.response ? `${errMsg} ${error.response.status}` : '',
+      };
+    }
+  }
+
+  setInternalCredentials(user: string, password: string) {
+    this.internalCredentials = { user, password };
+  }
+
+  async savePasswordForUser(user: string, password: string) {
+    await keytar.setPassword(this.service, user, password);
+  }
+
+  private async getPassword(user: string) {
+    if (this.internalCredentials.user === user)
+      return this.internalCredentials.password;
+    return keytar.getPassword(this.service, user);
+  }
+
+  async checkAndOptionallyAskForCredentials(
+    username: string,
+    authCallback: () => Promise<any>,
+  ) {
+    let token = null;
+    do {
+      logger.info(`Authorization with user: ${username}...`);
+      const authResult = await authCallback();
+      const accessToken = authResult?.access_token;
+      if (!accessToken) {
+        logger.warn('Authorization failed.');
+        const { secret } = await inquirer.prompt([
+          {
+            type: 'password',
+            name: 'secret',
+            message: `Enter password for [${username}]:`,
+          },
+        ]);
+        if (secret) await this.savePasswordForUser(username, secret);
+      } else {
+        token = accessToken;
+        logger.info('Auth OK');
+      }
+    } while (!token);
+    return token;
+  }
+
+  private async getRefreshToken() {
+    return keytar.getPassword(this.service, this.refreshAccount);
+  }
+
+  private async setRefreshToken(token: string) {
+    await keytar.setPassword(this.service, this.refreshAccount, token);
+  }
+
+  private async clearRefreshToken() {
+    await keytar.deletePassword(this.service, this.refreshAccount);
+  }
+
+  private async getDeviceCode(
+    baseUrl: string,
+    basicAuth: string,
+    tenantId: string,
+    moduleId: string,
+  ) {
+    const response = await axios.post<GetDeviceCodeResponse>(
       `${baseUrl}/auth-oauth2/oauth/device`,
-      {
-        module: moduleId,
-      },
+      { module: moduleId },
       {
         headers: {
           Accept: 'application/json',
@@ -177,170 +211,152 @@ async function getDeviceCode(
         },
       },
     );
-    return response.data as GetDeviceCodeResponse;
-  } catch (error) {
-    console.error('Failed to get device code:', error);
+    return response.data;
   }
-}
 
-async function pollForToken(
-  baseUrl: string,
-  basicAuth: string,
-  tenantId: string,
-  deviceCode: string,
-  expiresIn: number,
-  interval: number,
-) {
-  const exp = Date.now() + expiresIn * 1000;
-
-  while (Date.now() < exp - 2000) {
-    try {
-      const response = await axios.post(
-        `${baseUrl}/auth-oauth2/oauth/token`,
-        {
-          device_code: deviceCode,
-          grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-        },
-        {
-          headers: {
-            Accept: 'application/json',
-            'X-Tenant': tenantId,
-            'Content-Type': 'application/x-www-form-urlencoded',
-            Authorization: `Basic ${basicAuth}`,
+  private async pollForToken(
+    baseUrl: string,
+    basicAuth: string,
+    tenantId: string,
+    deviceCode: string,
+    expiresIn: number,
+    interval: number,
+  ) {
+    const expiry = Date.now() + expiresIn * 1000;
+    while (Date.now() < expiry - 2000) {
+      try {
+        const response = await axios.post<PollForTokenResponse>(
+          `${baseUrl}/auth-oauth2/oauth/token`,
+          {
+            device_code: deviceCode,
+            grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
           },
-          validateStatus: (status) => status < 500,
-        },
-      );
-
-      const tokenData = response.data as PollForTokenResponse;
-      console.log('pollForToken response', tokenData);
-
-      if ('access_token' in tokenData) {
-        refreshStorageHandler.setRefreshToken(tokenData.refresh_token);
-        return tokenData;
-      } else if (tokenData.error === 'slow_down') {
-        await new Promise((resolve) =>
-          setTimeout(resolve, interval * 2 * 1000),
+          {
+            headers: {
+              Accept: 'application/json',
+              'X-Tenant': tenantId,
+              'Content-Type': 'application/x-www-form-urlencoded',
+              Authorization: `Basic ${basicAuth}`,
+            },
+          },
         );
-      } else if (tokenData.error === 'authorization_pending') {
-        await new Promise((resolve) => setTimeout(resolve, interval * 1000));
+
+        if ('access_token' in response.data) {
+          await this.setRefreshToken(response.data.refresh_token);
+          return response.data;
+        }
+
+        if (response.data.error === 'slow_down') {
+          await this.delay(interval * 2 * 1000);
+        } else if (response.data.error === 'authorization_pending') {
+          await this.delay(interval * 1000);
+        }
+      } catch {
+        await this.delay(interval * 1000);
       }
-    } catch (error) {
-      console.error('Token polling error, retrying...', error);
-      await new Promise((resolve) => setTimeout(resolve, interval * 1000));
     }
+    return null;
   }
 
-  console.log('Authorization timed out or failed.');
-  return null;
-}
-
-async function getModuleConfig(baseUrl: string, accessToken: string) {
-  try {
-    const response = await axios.get(`${baseUrl}/auth-api/api/module-config`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    return response.data as ModuleConfig;
-  } catch (error) {
-    console.warn('Failed to get module config:', error);
+  private delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
-  return null;
-}
 
-export async function deviceCodeAuthFlow(
-  baseUrl: string,
-  basicAuth: string,
-  tenantId: string,
-  moduleId: string,
-) {
-  try {
-    const deviceCodeData = await getDeviceCode(
+  private async getModuleConfig(baseUrl: string, accessToken: string) {
+    const response = await axios.get<ModuleConfig>(
+      `${baseUrl}/auth-api/api/module-config`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    return response.data;
+  }
+
+  async deviceCodeAuthFlow(
+    baseUrl: string,
+    basicAuth: string,
+    tenantId: string,
+    moduleId: string,
+  ) {
+    const deviceCodeData = await this.getDeviceCode(
       baseUrl,
       basicAuth,
       tenantId,
       moduleId,
     );
-    console.log('Device code data:', deviceCodeData);
-    if (deviceCodeData) {
-      console.log(
-        `Please authorize: ${deviceCodeData.verification_uri_complete}`,
-      );
+    if (!deviceCodeData)
+      return { data: null, error: new Error('Device code auth flow failed') };
 
-      const tokenData = await pollForToken(
+    console.log(
+      `Please authorize: ${deviceCodeData.verification_uri_complete}`,
+    );
+    const tokenData = await this.pollForToken(
+      baseUrl,
+      basicAuth,
+      tenantId,
+      deviceCodeData.device_code,
+      deviceCodeData.expires_in,
+      deviceCodeData.interval,
+    );
+
+    if (!tokenData?.access_token)
+      return { data: null, error: new Error('Authorization failed') };
+
+    const moduleConfig = await this.getModuleConfig(
+      baseUrl,
+      tokenData.access_token,
+    );
+    console.log('Module config:', moduleConfig);
+    return { data: tokenData, error: null };
+  }
+
+  async authorizeWithDeviceCode(
+    baseUrl: string,
+    tenantId: string,
+    basicAuthPass: string,
+    moduleId: string,
+  ) {
+    const refreshToken = await this.getRefreshToken();
+    if (refreshToken) {
+      const authData = await this.refreshToken(
         baseUrl,
-        basicAuth,
+        basicAuthPass,
         tenantId,
-        deviceCodeData.device_code,
-        deviceCodeData.expires_in,
-        deviceCodeData.interval,
+        refreshToken,
       );
-
-      if (tokenData && tokenData.access_token) {
-        console.log('Authentication successful!');
-        const moduleConfig = await getModuleConfig(
-          baseUrl,
-          tokenData.access_token,
-        );
-        console.log('Module config:', moduleConfig);
-        return { error: null, data: tokenData };
-      } else {
-        console.log('Authorization timed out or failed.');
+      if (authData) {
+        await this.setRefreshToken(authData.refresh_token);
+        return { data: authData, error: null };
       }
     }
-    return { data: null, error: new Error('Device code auth flow failed') };
-  } catch (error: any) {
-    console.error('Device code auth flow error:', error);
-    return { data: null, error };
+    return this.deviceCodeAuthFlow(baseUrl, basicAuthPass, tenantId, moduleId);
   }
-}
 
-export const authorizeWithDeviceCode = async (
-  baseUrl: string,
-  tenant: string,
-  basicAuthPass: string,
-  moduleId: string,
-) => {
-  const refreshToken = await refreshStorageHandler.getRefreshToken();
-  console.log('Refresh token:', refreshToken);
-  if (refreshToken) {
-    const authData = await refreshTokenF(
-      baseUrl,
-      basicAuthPass,
-      tenant,
-      refreshToken,
-    );
-    if (authData) {
-      refreshStorageHandler.setRefreshToken(authData.refresh_token);
-      return { data: authData, error: null };
+  private async refreshToken(
+    baseUrl: string,
+    basicAuth: string,
+    tenantId: string,
+    refreshToken: string,
+  ) {
+    try {
+      const response = await axios.post<AuthData>(
+        `${baseUrl}/auth-oauth2/oauth/token`,
+        {
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            Authorization: `Basic ${basicAuth}`,
+            'X-Tenant': tenantId,
+          },
+        },
+      );
+      return response.data;
+    } catch {
+      return undefined;
     }
   }
-  return await deviceCodeAuthFlow(baseUrl, basicAuthPass, tenant, moduleId);
-};
-
-async function refreshTokenF(
-  baseUrl: string,
-  basicAuth: string,
-  tenantId: string,
-  refreshToken: string,
-): Promise<AuthData | undefined> {
-  try {
-    const response = await axios.post<AuthData>(
-      `${baseUrl}/auth-oauth2/oauth/token`,
-      {
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      },
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-          Authorization: `Basic ${basicAuth}`,
-          'X-Tenant': tenantId,
-        },
-      },
-    );
-    return response.data;
-  } catch (error) {
-    console.error('Failed to refresh token:', error);
-    return undefined;
-  }
 }
+
+export const authService = new AuthService();
+export const authorize = authService.authorize.bind(authService);
