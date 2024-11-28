@@ -121,23 +121,23 @@ class AuthService {
     try {
       const response = await axios.post(
         `${this.baseUrl}/auth-oauth2/oauth/token`,
-        null,
+        `username=${encodeURIComponent(
+          this.username!,
+        )}&password=${encodeURIComponent(
+          password!,
+        )}&grant_type=password&scope=read`,
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
             Authorization: `Basic ${this.basicAuth}`,
             'X-Tenant': this.tenantId!,
           },
-          data: `username=${encodeURIComponent(
-            this.username!,
-          )}&password=${encodeURIComponent(
-            password!,
-          )}&grant_type=password&scope=read`,
         },
       );
       return { authData: response.data as AuthData, err: null };
     } catch (error: any) {
       const errMsg = error?.response?.statusText || 'unknown error';
+      console.error(`Authorization error`, error);
       logger.error(`Authorization error: ${errMsg}`);
       return {
         err: error.response?.status || error,
