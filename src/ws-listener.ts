@@ -85,6 +85,9 @@ export async function connectWebSockets({
             var message = JSON.parse(data.body);
             await onOrdersUpdateAsync(message);
           },
+          {
+            'x-venue': venue,
+          },
         );
       }
       if (onNotificationAsync) {
@@ -93,6 +96,9 @@ export async function connectWebSockets({
           async function (data: any) {
             var message = JSON.parse(data.body);
             await onNotificationAsync(message);
+          },
+          {
+            'x-venue': venue,
           },
         );
       }
