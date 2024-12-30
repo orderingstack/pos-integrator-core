@@ -10,6 +10,7 @@ import {
   GetDeviceCodeResponse,
   ModuleConfig,
   PollForTokenResponse,
+  PollForTokenResponseSuccess,
 } from './types';
 
 interface ModuleData {
@@ -24,7 +25,7 @@ interface ModuleData {
 
 class AuthService {
   private readonly service = 'OrderingStack';
-  private readonly refreshAccount = 'refreshToken';
+  private refreshAccount = '';
   private accessToken: string | null = null;
   private accessTokenExpiresAt: number | null = null;
   private baseUrl: string | null = null;
@@ -52,6 +53,8 @@ class AuthService {
     this.basicAuth = basicAuthPass;
     this.username = username;
     this.moduleData = moduleData || null;
+    const moduleId = moduleData?.moduleId;
+    if (moduleId) this.refreshAccount = `${moduleId}-refresh-token`;
   }
 
   async authorize(
@@ -61,11 +64,7 @@ class AuthService {
     username: string,
     moduleData?: ModuleData,
   ): Promise<{ authData?: AuthData; err?: any; errMsg?: string }> {
-    this.baseUrl = baseUrl;
-    this.tenantId = tenantId;
-    this.basicAuth = basicAuthPass;
-    this.username = username;
-    this.moduleData = moduleData || null;
+    this.initialize(baseUrl, tenantId, basicAuthPass, username, moduleData);
     if (moduleData) {
       logger.info(
         `Authorization with device code for module: ${moduleData.moduleId}...`,
@@ -149,11 +148,12 @@ class AuthService {
   async authorizeWithDeviceCode() {
     const refreshToken = await this.getRefreshToken();
     if (refreshToken) {
-      const authData = await this.refreshToken(refreshToken);
-      if (authData) {
-        await this.setRefreshToken(authData.refresh_token);
-        return { data: authData, error: null };
+      const { data } = await this.refreshToken(refreshToken);
+      if (data) {
+        await this.setRefreshToken(data.refresh_token);
+        return { data, error: null };
       }
+      logger.error(`authorizeWithDeviceCode error refreshing token`);
     }
     return this.deviceCodeAuthFlow();
   }
@@ -174,34 +174,63 @@ class AuthService {
           },
         },
       );
-      return response.data;
-    } catch {
-      return undefined;
+      return { data: response.data };
+    } catch (error) {
+      return { error };
     }
   }
 
-  async deviceCodeAuthFlow() {
-    const deviceCodeData = await this.getDeviceCode();
-    if (!deviceCodeData)
+  async deviceCodeAuthFlow(): Promise<
+    | {
+        data: null;
+        error: Error;
+      }
+    | {
+        data: PollForTokenResponseSuccess;
+        error: null;
+      }
+  > {
+    const { data: getDeviceCodeData, error: getDeviceCodeError } =
+      await this.getDeviceCode();
+    if (!getDeviceCodeData || getDeviceCodeError) {
+      console.error(
+        'Device code auth flow failed, stage getDeviceCode',
+        getDeviceCodeError,
+      );
+      this.moduleData?.eventHandlerCallback?.({
+        type: 'AUTHORIZATION_FAILED',
+        data: new Error('Authorization failed'),
+      });
+      if (!this.moduleData?.eventHandlerCallback)
+        this.saveToDeviceCodeAuthFile(
+          `${new Date().toISOString()} AUTHORIZATION_FAILED`,
+        );
       return { data: null, error: new Error('Device code auth flow failed') };
+    }
+    logger.info('Device code auth flow getDeviceCodeData', getDeviceCodeData);
     this.moduleData?.eventHandlerCallback?.({
       type: 'AUTHORIZATION_NEED',
-      data: deviceCodeData,
+      data: getDeviceCodeData,
     });
     if (!this.moduleData?.eventHandlerCallback)
       this.saveToDeviceCodeAuthFile(
         `${new Date().toISOString()} Please authorize using this url: ${
-          deviceCodeData.verification_uri_complete
+          getDeviceCodeData.verification_uri_complete
         }`,
       );
 
-    const tokenData = await this.pollForToken(
-      deviceCodeData.device_code,
-      deviceCodeData.expires_in,
-      deviceCodeData.interval,
-    );
+    const { data: pollForTokenData, error: pollForTokenError } =
+      await this.pollForToken(
+        getDeviceCodeData.device_code,
+        getDeviceCodeData.expires_in,
+        getDeviceCodeData.interval,
+      );
+    if (pollForTokenError?.message === 'POLL_FOR_TOKEN_TIMEOUT') {
+      logger.info('deviceCodeAuthFlow POLL_FOR_TOKEN_TIMEOUT, retrying...');
+      return await this.deviceCodeAuthFlow();
+    }
 
-    if (!tokenData?.access_token) {
+    if (!pollForTokenData?.access_token) {
       this.moduleData?.eventHandlerCallback?.({
         type: 'AUTHORIZATION_FAILED',
         data: new Error('Authorization failed'),
@@ -215,30 +244,34 @@ class AuthService {
 
     this.moduleData?.eventHandlerCallback?.({
       type: 'AUTHORIZATION_SUCCESS',
-      data: tokenData,
+      data: pollForTokenData,
     });
     if (!this.moduleData?.eventHandlerCallback)
       this.saveToDeviceCodeAuthFile(
         `${new Date().toISOString()} AUTHORIZATION_SUCCESS`,
       );
 
-    return { data: tokenData, error: null };
+    return { data: pollForTokenData, error: null };
   }
 
   private async getDeviceCode() {
-    const response = await axios.post<GetDeviceCodeResponse>(
-      `${this.baseUrl}/auth-oauth2/oauth/device`,
-      { module: this.moduleData?.moduleId },
-      {
-        headers: {
-          Accept: 'application/json',
-          'X-Tenant': this.tenantId!,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${this.basicAuth}`,
+    try {
+      const response = await axios.post<GetDeviceCodeResponse>(
+        `${this.baseUrl}/auth-oauth2/oauth/device`,
+        { module: this.moduleData?.moduleId },
+        {
+          headers: {
+            Accept: 'application/json',
+            'X-Tenant': this.tenantId!,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Basic ${this.basicAuth}`,
+          },
         },
-      },
-    );
-    return response.data;
+      );
+      return { data: response.data };
+    } catch (error) {
+      return { error };
+    }
   }
 
   private async pollForToken(
@@ -267,19 +300,21 @@ class AuthService {
 
         if ('access_token' in response.data) {
           await this.setRefreshToken(response.data.refresh_token);
-          return response.data;
+          return { data: response.data };
         }
-
-        if (response.data.error === 'slow_down') {
-          await this.delay(interval * 2 * 1000);
-        } else if (response.data.error === 'authorization_pending') {
+      } catch (error: any) {
+        if (error?.response?.data.error === 'slow_down') {
+          logger.info('pollForToken slow_down', error?.response?.data);
           await this.delay(interval * 1000);
+        } else if (error?.response?.data.error === 'authorization_pending') {
+          /* do nothing */
+        } else {
+          console.error('pollForToken error', error?.response?.data);
         }
-      } catch {
         await this.delay(interval * 1000);
       }
     }
-    return null;
+    return { error: new Error('POLL_FOR_TOKEN_TIMEOUT') };
   }
 
   async fetchModuleConfig() {
@@ -290,11 +325,10 @@ class AuthService {
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
       this.moduleConfig = response.data;
-      logger.debug('Module config fetched', this.moduleConfig);
-      return response.data;
+      return { data: this.moduleConfig };
     } catch (error) {
       logger.error('Failed to get module config', error);
-      return null;
+      return { error };
     }
   }
 
@@ -307,12 +341,12 @@ class AuthService {
     }
     this.fetchModuleConfigIntervalId = setInterval(
       () => {
-        this.getModuleConfig();
+        this.fetchModuleConfig();
       },
       Number(process.env.MODULE_CONFIG_FETCHING_INTERVAL_SEC || '300') * 1000,
     );
 
-    return await this.fetchModuleConfig();
+    await this.fetchModuleConfig();
   }
 
   getModuleConfig() {
