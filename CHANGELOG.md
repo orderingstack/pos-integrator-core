@@ -5,16 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.2] - 2025-01-28
+
+- Fix: payment 0
+
 ## [2.3.1] - 2024-06-21
+
 - Chore: update vuln dependencies
 
 ## [2.3.0] - 2024-06-03
+
 - Feature: set next run
 
 ## [2.2.0] - 2024-02-23
+
 - Feature: order append lines
 
 ## [2.1.1] - 2023-05-12
+
 - FIX: retrieve all orders not is stage DONE
 
 ## [2.1.0] - 2023-11-29
