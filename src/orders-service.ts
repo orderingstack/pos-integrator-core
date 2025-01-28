@@ -80,10 +80,6 @@ async function postOrderPayment(
   order: IOrder,
   paymentType: number,
 ) {
-  if (parseFloat(order.editTotal) === 0) {
-    //logger.debug(' <<<<<<<<   TOTAL:  ZERO     <<<<<<');
-    return { status: 500, data: { error: 'total === 0' } };
-  }
   const data = {
     orderId: order.id,
     paymentType: paymentType,
