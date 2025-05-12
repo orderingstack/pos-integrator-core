@@ -13,8 +13,11 @@ import {
   PollForTokenResponseSuccess,
 } from './types';
 
+const DEBUG = process.env.AUTHORIZATION_DEBUG === 'true';
+
 interface ModuleData {
   moduleId: string;
+  scope?: string;
   eventHandlerCallback?: (
     event:
       | { type: 'AUTHORIZATION_NEED'; data: GetDeviceCodeResponse }
@@ -159,6 +162,7 @@ class AuthService {
   }
 
   private async refreshToken(refreshToken: string) {
+    DEBUG && logger.info('refreshToken', refreshToken);
     try {
       const response = await axios.post<AuthData>(
         `${this.baseUrl}/auth-oauth2/oauth/token`,
@@ -174,8 +178,10 @@ class AuthService {
           },
         },
       );
+      DEBUG && logger.info('refreshToken response', response.data);
       return { data: response.data };
     } catch (error) {
+      DEBUG && logger.info('refreshToken error', error);
       return { error };
     }
   }
@@ -193,7 +199,7 @@ class AuthService {
     const { data: getDeviceCodeData, error: getDeviceCodeError } =
       await this.getDeviceCode();
     if (!getDeviceCodeData || getDeviceCodeError) {
-      console.error(
+      logger.error(
         'Device code auth flow failed, stage getDeviceCode',
         getDeviceCodeError,
       );
@@ -255,10 +261,16 @@ class AuthService {
   }
 
   private async getDeviceCode() {
+    const payload = {
+      module: this.moduleData?.moduleId!,
+      scope: this.moduleData?.scope || 'pos role.MENU',
+    };
+
+    DEBUG && logger.info('getDeviceCode payload', payload);
     try {
       const response = await axios.post<GetDeviceCodeResponse>(
         `${this.baseUrl}/auth-oauth2/oauth/device`,
-        { module: this.moduleData?.moduleId },
+        payload,
         {
           headers: {
             Accept: 'application/json',
@@ -268,8 +280,10 @@ class AuthService {
           },
         },
       );
+      DEBUG && logger.info('getDeviceCode response', response.data);
       return { data: response.data };
     } catch (error) {
+      DEBUG && logger.info('getDeviceCode error', error);
       return { error };
     }
   }
@@ -282,6 +296,13 @@ class AuthService {
     const expiry = Date.now() + expiresIn * 1000;
     while (Date.now() < expiry - 2000) {
       try {
+        DEBUG &&
+          logger.info(
+            'pollForToken deviceCode',
+            deviceCode,
+            'interval',
+            interval,
+          );
         const response = await axios.post<PollForTokenResponse>(
           `${this.baseUrl}/auth-oauth2/oauth/token`,
           {
@@ -297,27 +318,30 @@ class AuthService {
             },
           },
         );
-
+        DEBUG && logger.info('pollForToken response', response.data);
         if ('access_token' in response.data) {
           await this.setRefreshToken(response.data.refresh_token);
           return { data: response.data };
         }
       } catch (error: any) {
+        DEBUG && logger.info('pollForToken error', error?.response?.data);
         if (error?.response?.data.error === 'slow_down') {
           logger.info('pollForToken slow_down', error?.response?.data);
           await this.delay(interval * 1000);
         } else if (error?.response?.data.error === 'authorization_pending') {
           /* do nothing */
         } else {
-          console.error('pollForToken error', error?.response?.data);
+          logger.error('pollForToken error', error?.response?.data);
         }
         await this.delay(interval * 1000);
       }
     }
+    DEBUG && logger.info('pollForToken timeout');
     return { error: new Error('POLL_FOR_TOKEN_TIMEOUT') };
   }
 
   async fetchModuleConfig() {
+    DEBUG && logger.info('fetchModuleConfig', this.moduleData?.moduleId);
     try {
       const accessToken = await this.getAccessToken();
       const response = await axios.get<ModuleConfig>(
@@ -325,9 +349,10 @@ class AuthService {
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
       this.moduleConfig = response.data;
+      DEBUG && logger.info('fetchModuleConfig response', response.data);
       return { data: this.moduleConfig };
     } catch (error) {
-      logger.error('Failed to get module config', error);
+      DEBUG && logger.info('fetchModuleConfig error', error);
       return { error };
     }
   }
