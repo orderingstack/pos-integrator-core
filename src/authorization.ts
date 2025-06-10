@@ -12,6 +12,7 @@ import {
   PollForTokenResponse,
   PollForTokenResponseSuccess,
 } from './types';
+import { logError } from './helpers';
 
 const DEBUG = process.env.AUTHORIZATION_DEBUG === 'true';
 
@@ -93,8 +94,7 @@ class AuthService {
     const isTokenValid =
       this.accessToken &&
       this.accessTokenExpiresAt &&
-      this.accessTokenExpiresAt - now > 5 * 60 * 1000;
-
+      this.accessTokenExpiresAt - now > 2 * 60 * 1000;
     if (isTokenValid) {
       return this.accessToken!;
     }
@@ -139,8 +139,8 @@ class AuthService {
       return { authData: response.data as AuthData, err: null };
     } catch (error: any) {
       const errMsg = error?.response?.statusText || 'unknown error';
-      console.error(`Authorization error`, error);
       logger.error(`Authorization error: ${errMsg}`);
+      logError(error);
       return {
         err: error.response?.status || error,
         errMsg: error.response ? `${errMsg} ${error.response.status}` : '',
@@ -181,7 +181,7 @@ class AuthService {
       DEBUG && logger.info('refreshToken response', response.data);
       return { data: response.data };
     } catch (error) {
-      DEBUG && logger.info('refreshToken error', error);
+      logError(error);
       return { error };
     }
   }
@@ -199,10 +199,8 @@ class AuthService {
     const { data: getDeviceCodeData, error: getDeviceCodeError } =
       await this.getDeviceCode();
     if (!getDeviceCodeData || getDeviceCodeError) {
-      logger.error(
-        'Device code auth flow failed, stage getDeviceCode',
-        getDeviceCodeError,
-      );
+      logger.error('Device code auth flow failed, stage getDeviceCode');
+      logError(getDeviceCodeError);
       this.moduleData?.eventHandlerCallback?.({
         type: 'AUTHORIZATION_FAILED',
         data: new Error('Authorization failed'),
@@ -283,7 +281,7 @@ class AuthService {
       DEBUG && logger.info('getDeviceCode response', response.data);
       return { data: response.data };
     } catch (error) {
-      DEBUG && logger.info('getDeviceCode error', error);
+      logError(error);
       return { error };
     }
   }
@@ -324,7 +322,7 @@ class AuthService {
           return { data: response.data };
         }
       } catch (error: any) {
-        DEBUG && logger.info('pollForToken error', error?.response?.data);
+        DEBUG && logError(error);
         if (error?.response?.data.error === 'slow_down') {
           logger.info('pollForToken slow_down', error?.response?.data);
           await this.delay(interval * 1000);
@@ -353,6 +351,7 @@ class AuthService {
       return { data: this.moduleConfig };
     } catch (error) {
       DEBUG && logger.info('fetchModuleConfig error', error);
+      logError(error);
       return { error };
     }
   }
