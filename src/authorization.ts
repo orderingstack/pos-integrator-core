@@ -323,13 +323,15 @@ class AuthService {
         }
       } catch (error: any) {
         DEBUG && logError(error);
-        if (error?.response?.data.error === 'slow_down') {
+        const errorType = error?.response?.data?.error;
+        if (errorType === 'slow_down') {
           logger.info('pollForToken slow_down', error?.response?.data);
           await this.delay(interval * 1000);
-        } else if (error?.response?.data.error === 'authorization_pending') {
+        } else if (errorType === 'authorization_pending') {
           /* do nothing */
         } else {
           logger.error('pollForToken error', error?.response?.data);
+          return { error: new Error(`POLL_FOR_TOKEN_ERROR ${errorType}`) };
         }
         await this.delay(interval * 1000);
       }
