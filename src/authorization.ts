@@ -233,17 +233,17 @@ class AuthService {
       logger.info('deviceCodeAuthFlow POLL_FOR_TOKEN_TIMEOUT, retrying...');
       return await this.deviceCodeAuthFlow();
     }
-
+    const errorMessage = `Authorization failed, ${pollForTokenError?.message}`;
     if (!pollForTokenData?.access_token) {
       this.moduleData?.eventHandlerCallback?.({
         type: 'AUTHORIZATION_FAILED',
-        data: new Error('Authorization failed'),
+        data: new Error(errorMessage),
       });
       if (!this.moduleData?.eventHandlerCallback)
         this.saveToDeviceCodeAuthFile(
-          `${new Date().toISOString()} AUTHORIZATION_FAILED`,
+          `${new Date().toISOString()} ${errorMessage}`,
         );
-      return { data: null, error: new Error('Authorization failed') };
+      return { data: null, error: new Error(errorMessage) };
     }
 
     this.moduleData?.eventHandlerCallback?.({
