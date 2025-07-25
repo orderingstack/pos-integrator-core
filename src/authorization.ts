@@ -28,7 +28,7 @@ interface ModuleData {
 }
 
 class AuthService {
-  private readonly service = 'OrderingStack';
+  public readonly service = 'OrderingStack';
   private refreshAccount = '';
   private accessToken: string | null = null;
   private accessTokenExpiresAt: number | null = null;
@@ -459,7 +459,7 @@ export const setInternalCredentials =
 export const checkAndOptionallyAskForCredentials =
   authService.checkAndOptionallyAskForCredentials.bind(authService);
 export async function savePasswordForUser(user: string, password: string) {
-  await keytar.setPassword('OrderingStack', user, password);
+  await keytar.setPassword(authService.service, user, password);
 }
 
 export enum AlertSeverity {
