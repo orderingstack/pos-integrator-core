@@ -394,7 +394,7 @@ class AuthService {
     await keytar.setPassword(this.service, user, password);
   }
 
-  private async getPassword(user: string) {
+  async getPassword(user: string) {
     if (this.internalCredentials.user === user)
       return this.internalCredentials.password;
     return keytar.getPassword(this.service, user);
@@ -458,3 +458,49 @@ export const setInternalCredentials =
   authService.setInternalCredentials.bind(authService);
 export const checkAndOptionallyAskForCredentials =
   authService.checkAndOptionallyAskForCredentials.bind(authService);
+export async function savePasswordForUser(user: string, password: string) {
+  await keytar.setPassword('OrderingStack', user, password);
+}
+
+export enum AlertSeverity {
+  DEBUG,
+  INFO,
+  WARN,
+  ERROR,
+  CRITICAL,
+}
+
+export async function sendAlertMessage(
+  accessToken: string,
+  message: {
+    source: string;
+    eventName: string;
+    severity: AlertSeverity;
+    dateTime?: string;
+    user?: string;
+    tenant?: string;
+    orderId?: string;
+    venues?: string[];
+    params?: Record<string, string>;
+  },
+) {
+  if (!message.dateTime) message.dateTime = new Date().toISOString();
+  try {
+    const response = await axios.post(
+      `${process.env.BASE_URL}/alert-service/message`,
+      message,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+    return { data: response.data };
+  } catch (error) {
+    return {
+      data: null,
+      error: error,
+    };
+  }
+}
