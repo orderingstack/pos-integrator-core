@@ -383,8 +383,11 @@ class AuthService {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  setInternalCredentials(user: string, password: string) {
+  async setInternalCredentials(user: string, password: string) {
     this.internalCredentials = { user, password };
+    if (password) {
+      await this.savePasswordForUser(user, password);
+    }
   }
 
   async savePasswordForUser(user: string, password: string) {
