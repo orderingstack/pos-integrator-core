@@ -100,6 +100,7 @@ async function fetchCurrentProduct(id: string, token: string) {
     const resp = await axios.get(url, axconfig);
     return { product: resp.data, err: null };
   } catch (err) {
+    console.error('fetchCurrentProduct', err);
     return { product: {}, err: null }; //new product
   }
 }
@@ -146,6 +147,7 @@ async function saveChangedProduct(prod: any, token: string) {
     const r = await axios.request(axcall);
     return { ok: true, err: null };
   } catch (err: any) {
+    console.error('saveChangedProduct error', err);
     return { ok: false, err: err.message };
   }
 }
