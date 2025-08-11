@@ -10,6 +10,11 @@ import {
   PollForTokenResponseSuccess,
   AuthData,
 } from './types';
+import {
+  getModuleConfig as getModuleConfigFromCache,
+  startModuleConfigPolling,
+  stopModuleConfigPolling as stopPolling,
+} from './module-config';
 
 const DEBUG = process.env.AUTH_DEBUG === 'true';
 const DEFAULT_HTTP_TIMEOUT = 10000; // 10 seconds
@@ -254,6 +259,10 @@ async function authorizeWithDeviceCode(
     );
     logger.info('Device code authorization successful');
 
+    const authData = tokenResult.data;
+    const getAccessTokenForModule = async () => authData.access_token;
+    startModuleConfigPolling(baseUrl, getAccessTokenForModule);
+
     return { authData: tokenResult.data, err: null };
   } catch (error: any) {
     const errorMsg = `Device code authorization error: ${error.message}`;
@@ -316,6 +325,14 @@ export async function checkAndOptionallyAskForCredentials(
 }
 
 export const getModuleConfig = () => {
-  //todo
-  return {};
+  return getModuleConfigFromCache();
+};
+
+export const stopModuleConfigPolling = () => {
+  stopPolling();
+};
+
+export const cleanup = () => {
+  stopPolling();
+  DEBUG && logger.debug('Authorization cleanup called');
 };
