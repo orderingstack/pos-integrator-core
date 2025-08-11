@@ -2,6 +2,7 @@ import { getModuleConfig } from './authorization';
 import { logger } from './logger';
 
 export const getConfigValue = (key: string) => {
+  //@ts-ignore
   const { config } = getModuleConfig() || {};
   return config?.[key] || process.env[key];
 };
