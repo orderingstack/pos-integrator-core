@@ -7,8 +7,6 @@ const StompJs = require('@stomp/stompjs');
 import sjsc from 'sockjs-client';
 import { logger } from './logger';
 
-const WS_DEBUG = process.env.WS_DEBUG === 'true';
-
 interface WebsocketConnectParams {
   tenant: string;
   venue: string;
@@ -49,10 +47,8 @@ export async function connectWebSockets({
       passcode: null,
     },
     userUUID: null,
-    debug: function (str: string) {
-      if (WS_DEBUG) {
-        logger.debug('STOMP:', str);
-      }
+    debug: function (a: any) {
+      //logger.debug(a);
     },
     reconnectDelay: 20000,
     heartbeatIncoming: 4000,
@@ -75,7 +71,6 @@ export async function connectWebSockets({
       const accessToken = stompConfig.connectHeaders.login as unknown as string;
       await onConnectedAsync(accessToken);
       logger.info('Websocket connected.');
-
       var subscription = client.subscribe(
         `/kds/${tenant}/${venue}`,
         async function (data: any) {
@@ -90,6 +85,9 @@ export async function connectWebSockets({
             var message = JSON.parse(data.body);
             await onOrdersUpdateAsync(message);
           },
+          {
+            'x-venue': venue,
+          },
         );
       }
       if (onNotificationAsync) {
@@ -98,6 +96,9 @@ export async function connectWebSockets({
           async function (data: any) {
             var message = JSON.parse(data.body);
             await onNotificationAsync(message);
+          },
+          {
+            'x-venue': venue,
           },
         );
       }
