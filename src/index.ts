@@ -5,4 +5,5 @@ export * as helpers from './helpers';
 export { orderService } from './orders-service';
 export { getOrdersQueue } from './orders-local-queue-service';
 export * as productService from './products-service';
+export * from './alerts';
 export { setLogger, logger } from './logger';
