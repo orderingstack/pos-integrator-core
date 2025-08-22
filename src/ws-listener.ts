@@ -40,6 +40,8 @@ export async function connectWebSockets({
   onNotificationAsync,
   onSteeringCommandAsync,
 }: WebsocketConnectParams) {
+  const includeVenueHeader = process.env.WS_INCLUDE_VENUE_HEADER === 'true';
+
   const stompConfig = {
     brokerURL: `${process.env.BASE_URL}/ws`,
     connectHeaders: {
@@ -79,27 +81,25 @@ export async function connectWebSockets({
         },
       );
       if (onOrdersUpdateAsync) {
+        const headers = includeVenueHeader ? { 'x-venue': venue } : {};
         var subscriptionForOrdersUpdate = client.subscribe(
           `/order-changes/${tenant}/${stompConfig.userUUID}`,
           async function (data: any) {
             var message = JSON.parse(data.body);
             await onOrdersUpdateAsync(message);
           },
-          {
-            'x-venue': venue,
-          },
+          headers,
         );
       }
       if (onNotificationAsync) {
+        const headers = includeVenueHeader ? { 'x-venue': venue } : {};
         var subscriptionForNotifications = client.subscribe(
           `/notifications/${tenant}/${stompConfig.userUUID}`,
           async function (data: any) {
             var message = JSON.parse(data.body);
             await onNotificationAsync(message);
           },
-          {
-            'x-venue': venue,
-          },
+          headers,
         );
       }
       if (onSteeringCommandAsync) {
