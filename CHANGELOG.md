@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Refactor: move alert utilities to helpers module
 
+## [2.6.1] - 2025-08-21
+
+- Fix: disable venue header in ws connection
+
 ## [2.6.0] - 2025-07-25
 
 - Feat: device code authorization support
