@@ -461,4 +461,3 @@ export const checkAndOptionallyAskForCredentials =
 export async function savePasswordForUser(user: string, password: string) {
   await keytar.setPassword(authService.service, user, password);
 }
-
