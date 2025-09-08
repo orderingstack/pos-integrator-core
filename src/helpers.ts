@@ -39,14 +39,15 @@ export const AlertSeverity = {
   CRITICAL: 4,
 } as const;
 
-export type AlertSeverity = typeof AlertSeverity[keyof typeof AlertSeverity];
+export type AlertSeverityType =
+  (typeof AlertSeverity)[keyof typeof AlertSeverity];
 
 export async function sendAlertMessage(
   accessToken: string,
   message: {
     source: string;
     eventName: string;
-    severity: AlertSeverity;
+    severity: AlertSeverityType;
     dateTime?: string;
     user?: string;
     tenant?: string;
