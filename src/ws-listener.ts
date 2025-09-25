@@ -3,20 +3,23 @@ import {
   IOrder,
   ISteeringCommand,
 } from '@orderingstack/ordering-types';
-const StompJs = require('@stomp/stompjs');
-import sjsc from 'sockjs-client';
+import { Client, IFrame, Message, ReconnectionTimeMode } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import { logger } from './logger';
 
 interface WebsocketConnectParams {
   tenant: string;
   venue: string;
-  authDataProviderCallbackAsync: () => Promise<any>;
+  authDataProviderCallbackAsync: () => Promise<{
+    access_token: string;
+    UUID: string;
+  } | null>;
   onConnectedAsync: (access_token: string) => Promise<void>;
   onDisconnectAsync: () => Promise<void>;
   onMessageAsync: (order: IOrder) => Promise<void>;
-  onOrdersUpdateAsync: (order: IOrder) => Promise<void>;
-  onNotificationAsync: (message: INotificationMessage) => Promise<void>;
-  onSteeringCommandAsync: (cmd: ISteeringCommand) => Promise<void>;
+  onOrdersUpdateAsync?: (order: IOrder) => Promise<void>;
+  onNotificationAsync?: (message: INotificationMessage) => Promise<void>;
+  onSteeringCommandAsync?: (cmd: ISteeringCommand) => Promise<void>;
 }
 
 /**
@@ -29,7 +32,7 @@ interface WebsocketConnectParams {
  * @param {*} onDisconnectAsync
  * @param {*} onMessageAsync async function (message, accessToken) {....}
  */
-export async function connectWebSockets({
+export function connectWebSockets({
   tenant,
   venue,
   authDataProviderCallbackAsync,
@@ -39,86 +42,106 @@ export async function connectWebSockets({
   onOrdersUpdateAsync,
   onNotificationAsync,
   onSteeringCommandAsync,
-}: WebsocketConnectParams) {
-  const includeVenueHeader = process.env.WS_INCLUDE_VENUE_HEADER === 'true';
+}: WebsocketConnectParams): void {
+  const config = {
+    baseUrl: process.env.BASE_URL,
+    reconnectDelay: process.env.WS_RECONNECT_DELAY
+      ? parseInt(process.env.WS_RECONNECT_DELAY, 10)
+      : 5000,
+    maxReconnectDelay: 30000,
+    heartbeatIncoming: process.env.WS_HEARTBEAT_INCOMING
+      ? parseInt(process.env.WS_HEARTBEAT_INCOMING, 10)
+      : 4000,
+    heartbeatOutgoing: process.env.WS_HEARTBEAT_OUTGOING
+      ? parseInt(process.env.WS_HEARTBEAT_OUTGOING, 10)
+      : 4000,
+    connectionTimeout: 8000,
+    includeVenueHeader: process.env.WS_INCLUDE_VENUE_HEADER === 'true',
+  };
 
-  const stompConfig = {
-    brokerURL: `${process.env.BASE_URL}/ws`,
-    connectHeaders: {
-      login: null,
-      passcode: null,
-    },
-    userUUID: null,
-    debug: function (a: any) {
-      //logger.debug(a);
-    },
-    reconnectDelay: 20000,
-    heartbeatIncoming: 4000,
-    heartbeatOutgoing: 4000,
+  const client = new Client();
 
-    beforeConnect: async function () {
-      const authDataResp = await authDataProviderCallbackAsync();
-      if (!authDataResp) {
-        logger.error('Access token provider error - deactivating socket');
-        client.deactivate();
-        return;
+  const connectionState = {
+    accessToken: '',
+    userUUID: '',
+  };
+
+  client.configure({
+    brokerURL: `${config.baseUrl}/ws`,
+    reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
+    reconnectDelay: config.reconnectDelay,
+    maxReconnectDelay: config.maxReconnectDelay,
+    connectionTimeout: config.connectionTimeout,
+    heartbeatIncoming: config.heartbeatIncoming,
+    heartbeatOutgoing: config.heartbeatOutgoing,
+    discardWebsocketOnCommFailure: true,
+
+    debug: (str: string) => {
+      // logger.debug(str);
+    },
+
+    beforeConnect: async () => {
+      try {
+        const authData = await authDataProviderCallbackAsync();
+        if (!authData) {
+          logger.error(
+            'Authentication provider did not return data. Deactivating client.',
+          );
+          await client.deactivate();
+          return;
+        }
+
+        connectionState.accessToken = authData.access_token;
+        connectionState.userUUID = authData.UUID;
+
+        client.connectHeaders = {
+          login: connectionState.accessToken,
+          passcode: '',
+        };
+      } catch (error) {
+        logger.error('Error during authDataProviderCallbackAsync:', error);
+        await client.deactivate();
       }
-
-      const { access_token, UUID } = authDataResp;
-      stompConfig.connectHeaders.login = access_token;
-      stompConfig.userUUID = UUID;
     },
 
-    onConnect: async function () {
-      const accessToken = stompConfig.connectHeaders.login as unknown as string;
-      await onConnectedAsync(accessToken);
+    onConnect: async (frame: IFrame) => {
       logger.info('Websocket connected.');
-      var subscription = client.subscribe(
-        `/kds/${tenant}/${venue}`,
-        async function (data: any) {
-          var message = JSON.parse(data.body);
-          await onMessageAsync(message);
-        },
-      );
+      await onConnectedAsync(connectionState.accessToken);
+
+      client.subscribe(`/kds/${tenant}/${venue}`, (message: Message) => {
+        onMessageAsync(JSON.parse(message.body));
+      });
+
+      const headers = config.includeVenueHeader
+        ? { 'x-venue': venue }
+        : undefined;
+
       if (onOrdersUpdateAsync) {
-        const headers = includeVenueHeader ? { 'x-venue': venue } : {};
-        var subscriptionForOrdersUpdate = client.subscribe(
-          `/order-changes/${tenant}/${stompConfig.userUUID}`,
-          async function (data: any) {
-            var message = JSON.parse(data.body);
-            await onOrdersUpdateAsync(message);
+        client.subscribe(
+          `/order-changes/${tenant}/${connectionState.userUUID}`,
+          (message: Message) => {
+            onOrdersUpdateAsync(JSON.parse(message.body));
           },
           headers,
         );
       }
       if (onNotificationAsync) {
-        const headers = includeVenueHeader ? { 'x-venue': venue } : {};
-        var subscriptionForNotifications = client.subscribe(
-          `/notifications/${tenant}/${stompConfig.userUUID}`,
-          async function (data: any) {
-            var message = JSON.parse(data.body);
-            await onNotificationAsync(message);
+        client.subscribe(
+          `/notifications/${tenant}/${connectionState.userUUID}`,
+          (message: Message) => {
+            onNotificationAsync(JSON.parse(message.body));
           },
           headers,
         );
       }
       if (onSteeringCommandAsync) {
-        const subscriptionForSteeringCmds = client.subscribe(
-          `/steering/${tenant}/${venue}`,
-          async function (data: any) {
-            var message = JSON.parse(data.body);
-            await onSteeringCommandAsync(message);
-          },
-        );
+        client.subscribe(`/steering/${tenant}/${venue}`, (message: Message) => {
+          onSteeringCommandAsync(JSON.parse(message.body));
+        });
       }
     },
 
-    onDisconnect: async function () {
-      await onDisconnectAsync();
-      logger.warn('Websocket disconnected.');
-    },
-
-    onStompError: function (frame: any) {
+    onStompError: (frame: IFrame) => {
       // Will be invoked in case of error encountered at Broker
       // Bad login/passcode typically will cause an error
       // Complaint brokers will set `message` header with a brief message. Body may contain details.
@@ -126,28 +149,24 @@ export async function connectWebSockets({
       logger.error('Broker reported error: ' + frame.headers['message']);
       logger.error('Additional details: ' + frame.body);
     },
-    onWebSocketClose: function (e: any) {
-      logger.info('Websocket closed.');
-    },
-    onWebSocketError: function (e: any) {
-      logger.error('Websocket error.', e);
-    },
-    onUnhandledMessage: function (m: any) {
-      //logger.debug(m);
-    },
-    logRawCommunication: true,
-    discardWebsocketOnCommFailure: true,
-  };
 
-  // @ts-ignore
-  const client = new StompJs.Client(stompConfig);
+    onWebSocketClose: (event: CloseEvent) => {
+      logger.warn(
+        `Websocket closed. Code: ${event.code}, Reason: ${event.reason}`,
+      );
+      onDisconnectAsync();
+    },
+
+    onWebSocketError: (event: Event) => {
+      logger.error('Websocket error.', event);
+    },
+  });
+
   if (typeof WebSocket !== 'function') {
-    // Fallback code
-    // @ts-ignore
     client.webSocketFactory = () => {
-      const ws = sjsc(`${process.env.BASE_URL}/ws`);
-      return ws;
+      return new SockJS(`${config.baseUrl}/ws`) as WebSocket;
     };
   }
+
   client.activate();
 }
